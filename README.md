@@ -15,6 +15,8 @@ encpass.sh requires the following software to be installed:
 * OpenSSL
 * SSH (uses ssh-keygen)
 
+## Installation
+
 Clone the repo and copy the encpass.sh script to the directory where your other script resides.
 
 ## Usage
