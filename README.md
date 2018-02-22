@@ -11,7 +11,7 @@ Note: It will create the following files in the current directory your script is
 
 encpass.sh requires the following software to be installed:
 
-* POSIX compliant shell
+* BASH shell
 * OpenSSL
 * SSH (uses ssh-keygen)
 
@@ -31,12 +31,19 @@ See the test.sh example...
 . ./encpass.sh
 password=$(get_password)
 # Call it specifying a directory
-#password=$(get_password ~/.ssh)
+#password=$(get_password -f ~/.ssh)
 echo $password
 ```
 
-## Limitations
+## Options
 
-Ideally this script can be used in all POSIX compliant shells, but it has only been really tested within BASH.  If you encounter an issue using it in another shell please log an issue and/or submit a pull request for a fix.
+```
+-f PATH             Location of SSH keys.  Defaults to "~/.ssh".
+-n FILE_NAME        Name of the private SSH key to use. Defaults to "id_rsa".
+-p PASSWORD_FILE    Allow for multiple password files, improving reuse of 
+                      this library.  Defaults to "pass" and expands to "pass.enc".
+```
 
-It is intended that encpass.sh handles one password per directory; therefore, if you have multiple scripts that use **different passwords** that you would like to use encpass.sh for, then you should separate them into different directories.  I'm sure with a little work encpass.sh could be enhanced to track passwords for multiple scripts in the same directory.  Pull requests welcome. :-)
+## Contributing
+
+Pull requests welcome. :-)
