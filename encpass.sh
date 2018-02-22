@@ -39,8 +39,8 @@ get_password() {
   fi
 
   if [[ ! -x "$(command -v openssl)" ]]; then
-    echo "Error: OpenSSL is not installed or not accessible in the current \
-      path.  Please install it and try again." >&2
+    /bin/echo -n "Error: OpenSSL is not installed or not accessible in the" >&2
+    echo " current path.  Please install it and try again." >&2
     exit 1
   fi
 
@@ -70,8 +70,8 @@ get_password() {
   shift $((OPTIND-1))
 
   if [[ ! -d "${KEY_PATH}" ]]; then
-    echo "Error: KEY_PATH directory ${KEY_PATH} not found.  Please check \
-      permissions and try again." >&2
+    /bin/echo -n "Error: KEY_PATH directory ${KEY_PATH} not found. Please" >&2
+    echo " check permissions and try again." >&2
     exit 1
   fi
 
@@ -79,8 +79,8 @@ get_password() {
   # does not already exist
   if [[ ! -f "${KEY_PATH}/${KEY_NAME}.pub.pem" ]]; then
     if [[ ! -x "$(command -v ssh-keygen)" ]]; then
-      echo "ssh-keygen is needed to generate a PKCS8 version of your public \
-        key.  Please install it and try again." >&2
+      /bin/echo -n "ssh-keygen is needed to generate a PKCS8 version of" >&2
+      echo " your public key.  Please install it and try again." >&2
       exit 1
     fi
 
@@ -97,8 +97,8 @@ get_password() {
       "${KEY_PATH}"/"${KEY_NAME}".pub.pem
 
     if [[ $? -ne 0 ]] || [[ ! -f "${KEY_PATH}"/"${KEY_NAME}".pub.pem ]]; then
-      echo "Failed to create PKCS8 version of the public key.  Please check \
-        permissions and try again." >&2
+      /bin/echo -n "Failed to create PKCS8 version of the public key." >&2
+      echo " Please check permissions and try again." >&2
       exit 1
     fi
   fi
