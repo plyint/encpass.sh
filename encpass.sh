@@ -25,8 +25,8 @@
 ################################################################################
 
 get_key_path() {
-	if [ ! -z $1 ]; then
-		get_abs_filename $1
+	if [ ! -z "$1" ]; then
+		get_abs_filename "$1"
 	else
 		get_abs_filename ~/.ssh
 	fi
@@ -38,20 +38,20 @@ get_password() {
 		exit 1
 	fi
 
-	KEY_PATH=$(get_key_path $1)
+	KEY_PATH=$(get_key_path "$1")
 
-	if [ ! -d $KEY_PATH ]; then
+	if [ ! -d "$KEY_PATH" ]; then
 		echo "Error: KEY_PATH directory $KEY_PATH not found.  Please check permissions and try again." >&2
 		exit 1
 	fi
 
 	# Create a PKCS8 version of the public key in the current directory if one does not already exist
-	if [ ! -z id_rsa.pub.pem ]; then
+	if [ ! -e id_rsa.pub.pem ]; then
 		if [ ! -x "$(command -v ssh-keygen)" ]; then
 			echo "ssh-keygen is needed to generate a PKCS8 version of your public key.  Please install it and try again." >&2
 		fi
 
-		ssh-keygen -f $KEY_PATH/id_rsa.pub -e -m PKCS8 > id_rsa.pub.pem
+		ssh-keygen -f "$KEY_PATH/id_rsa.pub" -e -m PKCS8 > id_rsa.pub.pem
 
 		if [ ! -f id_rsa.pub.pem ]; then
 			echo "Failed to create PKCS8 version of the public key.  Please check permissions and try again." >&2
@@ -63,17 +63,17 @@ get_password() {
 		set_password
 	fi
 
-    echo $(openssl rsautl -decrypt -ssl -inkey $KEY_PATH/id_rsa -in pass.enc)
+	openssl rsautl -decrypt -ssl -inkey "$KEY_PATH/id_rsa" -in pass.enc
 }
 
 set_password() {
 	echo "Enter your Password:" >&2
 	stty -echo
-	read PASSWORD
+	read -r PASSWORD
 	stty echo
 	echo "Confirm your Password:" >&2
 	stty -echo
-	read CPASSWORD
+	read -r CPASSWORD
 	stty echo
 	if [ "$PASSWORD" = "$CPASSWORD" ]; then
 		echo "$PASSWORD" | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out pass.enc
@@ -84,13 +84,13 @@ set_password() {
 }
 
 get_abs_filename() {
-  # $1 : relative filename
-  filename=$1
-  parentdir=$(dirname "${filename}")
+	# $1 : relative filename
+	filename=$1
+	parentdir=$(dirname "${filename}")
 
-  if [ -d "${filename}" ]; then
-      echo "$(cd "${filename}" && pwd)"
-  elif [ -d "${parentdir}" ]; then
-    echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
-  fi
+	if [ -d "${filename}" ]; then
+		echo "$(cd "${filename}" && pwd)"
+	elif [ -d "${parentdir}" ]; then
+		echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
+	fi
 }
