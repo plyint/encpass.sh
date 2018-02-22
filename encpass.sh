@@ -75,8 +75,8 @@ set_password() {
 	stty -echo
 	read CPASSWORD
 	stty echo
-	if [ $PASSWORD == $CPASSWORD ]; then
-		echo $PASSWORD | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out pass.enc
+	if [ "$PASSWORD" = "$CPASSWORD" ]; then
+		echo "$PASSWORD" | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out pass.enc
 	else
 		echo "Error: passwords do not match.  Please try again." >&2
 		exit 1
