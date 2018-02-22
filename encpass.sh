@@ -1,5 +1,5 @@
-#!/bin/sh
-################################################################################
+#!/usr/bin/env bash
+###############################################################################
 # Filename: encpass.sh
 # Description: This script allows a user to encrypt a password at runtime and
 #              then use it, decrypted, within another script. This prevents
@@ -21,76 +21,127 @@
 #
 # Usage: . ./encpass.sh
 #        ...
-#        $password=$(get_password)
-################################################################################
-
-get_key_path() {
-	if [ ! -z "$1" ]; then
-		get_abs_filename "$1"
-	else
-		get_abs_filename ~/.ssh
-	fi
-}
+#        password=$(get_password)
+###############################################################################
 
 get_password() {
-	if [ ! -x "$(command -v openssl)" ]; then
-		echo "Error: OpenSSL is not installed or not accessible in the current path.  Please install it and try again." >&2
-		exit 1
-	fi
+  declare local KEY_NAME
+  declare local KEY_PATH
+  declare local PASS_FILE
 
-	KEY_PATH=$(get_key_path "$1")
+  # Don't allow use of unset variables
+  if [[ ! "$-" =~ 'u' ]]; then
+    set -u
+    declare -r local UNSET_OFF=true
+  else
+    declare -r local UNSET_OFF=false
+  fi
 
-	if [ ! -d "$KEY_PATH" ]; then
-		echo "Error: KEY_PATH directory $KEY_PATH not found.  Please check permissions and try again." >&2
-		exit 1
-	fi
+  if [[ ! -x "$(command -v openssl)" ]]; then
+    /bin/echo -n "Error: OpenSSL is not installed or not accessible in the" >&2
+    echo " current path.  Please install it and try again." >&2
+    exit 1
+  fi
 
-	# Create a PKCS8 version of the public key in the current directory if one does not already exist
-	if [ ! -e id_rsa.pub.pem ]; then
-		if [ ! -x "$(command -v ssh-keygen)" ]; then
-			echo "ssh-keygen is needed to generate a PKCS8 version of your public key.  Please install it and try again." >&2
-		fi
+  local KEY_NAME='id_rsa'
+  local KEY_PATH=$(get_abs_filename "~/.ssh")
+  local PASS_FILE='pass'
 
-		ssh-keygen -f "$KEY_PATH/id_rsa.pub" -e -m PKCS8 > id_rsa.pub.pem
+  # Allow for options flags
+  # -f PATH             Change location of keys
+  # -n FILE_NAME        Name of the private SSH key to use
+  # -p PASSWORD_FILE    Allow for multiple password files, improving reuse of 
+  #                       this library
+  local OPTIND f p
+  while getopts ":f:n:p:" opts; do
+    case "${opts}" in
+      'f')
+        KEY_PATH=$(get_abs_filename "${OPTARG}")
+        ;;
+      'n')
+        KEY_NAME="${OPTARG}"
+        ;;
+      'p')
+        PASS_FILE="${OPTARG}"
+        ;;
+    esac
+  done
+  shift $((OPTIND-1))
 
-		if [ ! -f id_rsa.pub.pem ]; then
-			echo "Failed to create PKCS8 version of the public key.  Please check permissions and try again." >&2
-			exit 1
-		fi
-	fi
+  if [[ ! -d "${KEY_PATH}" ]]; then
+    /bin/echo -n "Error: KEY_PATH directory ${KEY_PATH} not found. Please" >&2
+    echo " check permissions and try again." >&2
+    exit 1
+  fi
 
-	if [ ! -f pass.enc ]; then
-		set_password
-	fi
+  # Create a PKCS8 version of the public key in the current directory if one
+  # does not already exist
+  if [[ ! -f "${KEY_NAME}.pub.pem" ]]; then
+    if [[ ! -x "$(command -v ssh-keygen)" ]]; then
+      /bin/echo -n "ssh-keygen is needed to generate a PKCS8 version of" >&2
+      echo " your public key.  Please install it and try again." >&2
+      exit 1
+    fi
 
-	openssl rsautl -decrypt -ssl -inkey "$KEY_PATH/id_rsa" -in pass.enc
+    # Create a public key from the private ssh key, if needed
+    if [[ ! -f "${KEY_PATH}/${KEY_NAME}.pub" ]]; then
+      ssh-keygen -yf "${KEY_PATH}/${KEY_NAME}" > "${KEY_PATH}/${KEY_NAME}.pub"
+      if [[ $? -ne 0 ]] || [[ ! -f "${KEY_PATH}/${KEY_NAME}.pub" ]]; then
+        echo "Failed to create a public key of the private SSH key" >&2
+        exit 1
+      fi
+    fi
+
+    ssh-keygen -f "${KEY_PATH}/${KEY_NAME}.pub" -e -m PKCS8 > \
+      "${KEY_NAME}".pub.pem
+
+    if [[ $? -ne 0 ]] || [[ ! -f "${KEY_NAME}.pub.pem" ]]; then
+      /bin/echo -n "Failed to create PKCS8 version of the public key." >&2
+      echo " Please check permissions and try again." >&2
+      exit 1
+    fi
+  fi
+
+  if [[ ! -f "${PASS_FILE}.enc" ]]; then
+    set_password
+  fi
+
+  openssl rsautl -decrypt -ssl -inkey "${KEY_PATH}"/"${KEY_NAME}" -in \
+    "${PASS_FILE}".enc
+
+  if [[ $UNSET_OFF ]]; then
+    set +u
+  fi
 }
 
 set_password() {
-	echo "Enter your Password:" >&2
-	stty -echo
-	read -r PASSWORD
-	stty echo
-	echo "Confirm your Password:" >&2
-	stty -echo
-	read -r CPASSWORD
-	stty echo
-	if [ "$PASSWORD" = "$CPASSWORD" ]; then
-		echo "$PASSWORD" | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out pass.enc
-	else
-		echo "Error: passwords do not match.  Please try again." >&2
-		exit 1
-	fi
+  # Ask for, and set, the password in an encrypted file
+  echo "Enter your Password:" >&2
+  declare local PASSWORD
+  declare local CPASSWORD
+  stty -echo
+  read -r PASSWORD
+  stty echo
+  echo "Confirm your Password:" >&2
+  stty -echo
+  read -r CPASSWORD
+  stty echo
+  if [[ "${PASSWORD}" = "${CPASSWORD}" ]]; then
+    echo "${PASSWORD}" | openssl rsautl -encrypt -pubin -inkey \
+      "${KEY_NAME}".pub.pem -out "${PASS_FILE}".enc
+  else
+    echo "Error: passwords do not match.  Please try again." >&2
+    exit 1
+  fi
 }
 
 get_abs_filename() {
-	# $1 : relative filename
-	filename=$1
-	parentdir=$(dirname "${filename}")
+  # $1 : relative filename
+  local filename="${1}"
 
-	if [ -d "${filename}" ]; then
-		echo "$(cd "${filename}" && pwd)"
-	elif [ -d "${parentdir}" ]; then
-		echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
-	fi
+  if [ -d "${filename}" ]; then
+    echo "${filename}"
+  elif [ -f "${filename}" ]; then
+    echo "${filename/##.*}"
+  fi
 }
