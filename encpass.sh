@@ -19,7 +19,7 @@
 #       You may pass a different directory to pull the keys from as an argument
 #       to the script.
 #
-# Usage: source ./encpass.sh
+# Usage: . ./encpass.sh
 #        ...
 #        $password=$(get_password)
 ################################################################################

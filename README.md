@@ -28,7 +28,7 @@ By default, encpass.sh assumes that the ssh public/private keys are accessible b
 See the test.sh example...
 ```
 #!/bin/sh
-source ./encpass.sh
+. ./encpass.sh
 password=$(get_password)
 # Call it specifying a directory
 #password=$(get_password ~/.ssh)
