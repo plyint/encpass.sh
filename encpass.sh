@@ -21,7 +21,7 @@
 #
 # Usage: . ./encpass.sh
 #        ...
-#        $password=$(get_password)
+#        password=$(get_password)
 ################################################################################
 
 get_key_path() {
