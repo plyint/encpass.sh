@@ -32,7 +32,6 @@ get_password() {
   # Don't allow use of unset variables
   if [[ ! "$-" =~ 'u' ]]; then
     set -u
-    # set -x
     declare -r local UNSET_OFF=true
   else
     declare -r local UNSET_OFF=false
@@ -112,7 +111,6 @@ get_password() {
 
   if [[ $UNSET_OFF ]]; then
     set +u
-    # set +x
   fi
 }
 
