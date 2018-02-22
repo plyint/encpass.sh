@@ -76,7 +76,7 @@ get_password() {
 
   # Create a PKCS8 version of the public key in the current directory if one
   # does not already exist
-  if [[ ! -f "${KEY_PATH}/${KEY_NAME}.pub.pem" ]]; then
+  if [[ ! -f "${KEY_NAME}.pub.pem" ]]; then
     if [[ ! -x "$(command -v ssh-keygen)" ]]; then
       /bin/echo -n "ssh-keygen is needed to generate a PKCS8 version of" >&2
       echo " your public key.  Please install it and try again." >&2
@@ -93,21 +93,21 @@ get_password() {
     fi
 
     ssh-keygen -f "${KEY_PATH}/${KEY_NAME}.pub" -e -m PKCS8 > \
-      "${KEY_PATH}"/"${KEY_NAME}".pub.pem
+      "${KEY_NAME}".pub.pem
 
-    if [[ $? -ne 0 ]] || [[ ! -f "${KEY_PATH}"/"${KEY_NAME}".pub.pem ]]; then
+    if [[ $? -ne 0 ]] || [[ ! -f "${KEY_NAME}.pub.pem" ]]; then
       /bin/echo -n "Failed to create PKCS8 version of the public key." >&2
       echo " Please check permissions and try again." >&2
       exit 1
     fi
   fi
 
-  if [[ ! -f "${KEY_PATH}/${PASS_FILE}.enc" ]]; then
+  if [[ ! -f "${PASS_FILE}.enc" ]]; then
     set_password
   fi
 
-  openssl rsautl -decrypt -ssl -inkey "${KEY_PATH}/${KEY_NAME}" -in \
-    "${KEY_PATH}"/"${PASS_FILE}".enc
+  openssl rsautl -decrypt -ssl -inkey "${KEY_PATH}"/"${KEY_NAME}" -in \
+    "${PASS_FILE}".enc
 
   if [[ $UNSET_OFF ]]; then
     set +u
@@ -128,7 +128,7 @@ set_password() {
   stty echo
   if [[ "${PASSWORD}" = "${CPASSWORD}" ]]; then
     echo "${PASSWORD}" | openssl rsautl -encrypt -pubin -inkey \
-      "${KEY_PATH}"/"${KEY_NAME}".pub.pem -out "${KEY_PATH}"/"${PASS_FILE}".enc
+      "${KEY_NAME}".pub.pem -out "${PASS_FILE}".enc
   else
     echo "Error: passwords do not match.  Please try again." >&2
     exit 1
