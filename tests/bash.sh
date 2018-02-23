@@ -1,10 +1,10 @@
 #!/bin/bash
 
-. helper.sh
+source helper.sh
 
 test_run() {
 
-	. ../encpass.sh
+	source ../encpass.sh
 
 	# Set key path variable
 	export ENCPASS_KEY_PATH="key"
