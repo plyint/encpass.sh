@@ -1,6 +1,6 @@
 # encpass.sh
 
-encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using SSH and OpenSSL. It allows a user to encrypt a password at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date. By default, the SSH public key of the user is used to encrypt the user specified password. The encrypted password is stored in a file in the current directory. This file can then be decrypted to obtain the password using the user's SSH private key. Subsequent calls to get_password will not prompt for a password to be entered as the file with the encrypted password already exists. 
+encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using SSH and OpenSSL. It allows a user to encrypt a password at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date. By default, the SSH public key of the user is used to encrypt the user specified password. The encrypted password is stored in a file in the current directory. This file can then be decrypted to obtain the password using the user's SSH private key. Subsequent calls to get_password will not prompt for a password to be entered as the file with the encrypted password already exists.
 
 Note: It will create the following files in the current directory your script is run in:
 
@@ -34,6 +34,18 @@ password=$(get_password)
 #password=$(get_password ~/.ssh)
 echo $password
 ```
+
+You can also use it as a command line tool.
+Set new secret
+```
+./encpass.sh -s my_secret.enc
+```
+
+Get secret
+```
+./encpass.sh -g my_secret.enc
+```
+
 
 ## Limitations
 
