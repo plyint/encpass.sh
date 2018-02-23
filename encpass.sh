@@ -1,5 +1,4 @@
 #!/bin/sh
-#set -ex
 ################################################################################
 # Filename: encpass.sh
 # Description: This script allows a user to encrypt a password at runtime and
@@ -27,43 +26,48 @@
 #  In terminal get password from my_secret.enc
 #  ./encpass.sh -g my_secret.enc
 #
-#  In script use -q to suppress messages
-#  . ./encpass.sh -q
+#  In scripts use
+#  . ./encpass.sh
 #  ...
+#  ENCPASS_KEY_PATH=/custom-key-directory
 #  $password=$(get_password my_secret.enc)
+#
+#
 ################################################################################
 
-ENCPASS_KEY_PATH=~/.ssh
+if [ ! -z "$ENCPASS_KEY_PATH" ]; then
+	ENCPASS_KEY_PATH=~/.ssh
+fi
 
 encpass_checks() {
 
-    # Check openssl binary exist on system
-    if [ ! -x "$(command -v openssl)" ]; then
-        echo "Error: OpenSSL is not installed or not accessible in the current path.  Please install it and try again." >&2
-        exit 1
-    fi
-
-    # Check ssh-keygen binary exist on system
-	if [ ! -x "$(command -v ssh-keygen)" ]; then
-			echo "ssh-keygen is needed to generate a PKCS8 version of your public key.  Please install it and try again." >&2
+	# Check openssl binary exist on system
+	if [ ! -x "$(command -v openssl)" ]; then
+		echo "Error: OpenSSL is not installed or not accessible in the current path.  Please install it and try again." >&2
+		exit 1
 	fi
 
-    local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
-    # Check key path directory
-    if [ ! -d "$key_path" ]; then
-        echo "Error: key_path directory $key_path not found.  Please check permissions and try again." >&2
-        exit 1
-    fi
-}
+	# Check ssh-keygen binary exist on system
+	if [ ! -x "$(command -v ssh-keygen)" ]; then
+		echo "ssh-keygen is needed to generate a PKCS8 version of your public key.  Please install it and try again." >&2
+	fi
 
+	local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+
+	# Check key path directory
+	if [ ! -d "$key_path" ]; then
+	        echo "Error: key_path directory $key_path not found.  Please check permissions and try again." >&2
+		exit 1
+	fi
+}
 
 encpass_create_pkcs8_key() {
 
-    local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+	local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+
 	# Create a PKCS8 version of the public key in the current directory if one does not already exist
 	if [ ! -e id_rsa.pub.pem ]; then
 	
-        echo "Creating key"
 		ssh-keygen -f "$key_path/id_rsa.pub" -e -m PKCS8 > id_rsa.pub.pem
 
 		if [ ! -f id_rsa.pub.pem ]; then
@@ -72,18 +76,23 @@ encpass_create_pkcs8_key() {
 		fi
 
 	elif [ ! -s id_rsa.pub.pem ]; then
-        echo "PKCS8 public key is empty.  Please delete id_rsa.pub.pem file." >&2
-        exit 1
+	      echo "PKCS8 public key is empty.  Please delete id_rsa.pub.pem file." >&2
+	      exit 1
 	fi
 }
 
 get_password() {
 
-    local encpass_secret_file=$1
-    local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+	local encpass_secret_file="pass.enc"
 
-    encpass_checks
-    encpass_create_pkcs8_key
+	if [ ! -z "$1" ]; then
+		encpass_secret_file="$1"
+	fi
+
+	local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+
+	encpass_checks
+	encpass_create_pkcs8_key
 
 	if [ ! -f $encpass_secret_file ]; then
 		set_password
@@ -94,10 +103,14 @@ get_password() {
 
 set_password() {
 
-    local encpass_secret_file=$1
+	local encpass_secret_file="pass.enc"
 
-    encpass_checks
-    encpass_create_pkcs8_key
+	if [ ! -z "$1" ]; then
+		encpass_secret_file="$1"
+	fi
+
+	encpass_checks
+	encpass_create_pkcs8_key
 
 	echo "Enter your Password:" >&2
 	stty -echo
@@ -128,39 +141,39 @@ get_abs_filename() {
 }
 
 encpass_help() {
-    echo "Usage:"
-    echo "    encpass.sh -s <secret_file_name>  Set password."
-    echo "    encpass.sh -g <secret_file_name>  Get password."
-    echo "    encpass.sh -q                     Quiet, suppress messages. Use to source in scripts."
-    echo "    encpass.sh -d <directory>         Set key directory."
-    echo "    encpass.sh -h                     Display this help message."
-    exit 0
+	cat <<"EOF"
+Usage:
+  encpass.sh -s <secret_file_name>  Set password.
+  encpass.sh -g <secret_file_name>  Get password.
+  encpass.sh -d <directory>         Set key directory."
+  encpass.sh -h                     Display this help message.
+EOF
+	exit 1
 }
 
-while getopts "d::g:hs:q" ENCPASS_OPTS; do
-  case $ENCPASS_OPTS in
-    d)
-        ENCPASS_KEY_PATH=$OPTARG
-        ;;
-    s)
-        set_password $OPTARG
-        exit 0
-        ;;
-    g)
-        get_password $OPTARG
-        exit 0
-        ;;
-    q)
-        # Quiet suppress help
-        ;;
-    h )
-        encpass_help 
-        ;;
-  esac
+while getopts "d:s:g:h" ENCPASS_OPTS; do
+	case $ENCPASS_OPTS in
+		d )
+			ENCPASS_KEY_PATH=$OPTARG
+			;;
+		s )
+			set_password $OPTARG
+			exit 0
+			;;
+		g )
+			get_password $OPTARG
+			exit 0
+			;;
+		h )
+			encpass_help
+			;;
+		\? )
+			encpass_help
+			;;
+		: )
+			echo "Option -$OPTARG requires and argument"
+			exit 1
+			;;
+	esac
 done
 
-
-if [ $# -eq 0 ]; then
-    encpass_help 
-    exit 0
-fi
