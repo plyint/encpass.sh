@@ -9,3 +9,5 @@ echo "Testing ZSH"
 
 echo "Testing KSH"
 ./ksh.sh
+
+echo "Tests complete"
