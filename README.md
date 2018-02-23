@@ -46,6 +46,14 @@ Get secret
 ./encpass.sh -g my_secret.enc
 ```
 
+## Testing
+To run all tests you have to have BASH, KSH, ZSH and expect installed on your system.
+
+```
+cd tests
+./suite.sh
+```
+
 
 ## Limitations
 
