@@ -19,9 +19,9 @@
 #       You may pass a different directory to pull the keys from as an argument
 #       to the script.
 #
-# Usage: 
+# Usage:
 #  In terminal set new encrypted secret stored in my_secret.enc in current directory
-#  ./encpass.sh -s my_secret.enc 
+#  ./encpass.sh -s my_secret.enc
 #
 #  In terminal get password from my_secret.enc
 #  ./encpass.sh -g my_secret.enc
@@ -35,7 +35,7 @@
 #
 ################################################################################
 
-if [ ! -z "$ENCPASS_KEY_PATH" ]; then
+if [ -z "$ENCPASS_KEY_PATH" ]; then
 	ENCPASS_KEY_PATH=~/.ssh
 fi
 
@@ -52,7 +52,7 @@ encpass_checks() {
 		echo "ssh-keygen is needed to generate a PKCS8 version of your public key.  Please install it and try again." >&2
 	fi
 
-	local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+	key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
 
 	# Check key path directory
 	if [ ! -d "$key_path" ]; then
@@ -63,11 +63,11 @@ encpass_checks() {
 
 encpass_create_pkcs8_key() {
 
-	local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+	key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
 
 	# Create a PKCS8 version of the public key in the current directory if one does not already exist
 	if [ ! -e id_rsa.pub.pem ]; then
-	
+
 		ssh-keygen -f "$key_path/id_rsa.pub" -e -m PKCS8 > id_rsa.pub.pem
 
 		if [ ! -f id_rsa.pub.pem ]; then
@@ -83,27 +83,27 @@ encpass_create_pkcs8_key() {
 
 get_password() {
 
-	local encpass_secret_file="pass.enc"
+	encpass_secret_file="pass.enc"
 
 	if [ ! -z "$1" ]; then
 		encpass_secret_file="$1"
 	fi
 
-	local key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
+	key_path=$(get_abs_filename $ENCPASS_KEY_PATH)
 
 	encpass_checks
 	encpass_create_pkcs8_key
 
-	if [ ! -f $encpass_secret_file ]; then
+	if [ ! -f "$encpass_secret_file" ]; then
 		set_password
 	fi
 
-	openssl rsautl -decrypt -ssl -inkey "$key_path/id_rsa" -in $encpass_secret_file
+	openssl rsautl -decrypt -ssl -inkey "$key_path/id_rsa" -in "$encpass_secret_file"
 }
 
 set_password() {
 
-	local encpass_secret_file="pass.enc"
+	encpass_secret_file="pass.enc"
 
 	if [ ! -z "$1" ]; then
 		encpass_secret_file="$1"
@@ -121,7 +121,7 @@ set_password() {
 	read -r CPASSWORD
 	stty echo
 	if [ "$PASSWORD" = "$CPASSWORD" ]; then
-		echo "$PASSWORD" | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out $encpass_secret_file
+		echo "$PASSWORD" | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out "$encpass_secret_file"
 	else
 		echo "Error: passwords do not match.  Please try again." >&2
 		exit 1
@@ -157,11 +157,11 @@ while getopts "d:s:g:h" ENCPASS_OPTS; do
 			ENCPASS_KEY_PATH=$OPTARG
 			;;
 		s )
-			set_password $OPTARG
+			set_password "$OPTARG"
 			exit 0
 			;;
 		g )
-			get_password $OPTARG
+			get_password "$OPTARG"
 			exit 0
 			;;
 		h )
