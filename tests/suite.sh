@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+
+echo "Testing SH"
+./sh.sh
+
 echo "Testing BASH"
 ./bash.sh
 
