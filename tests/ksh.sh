@@ -1,6 +1,6 @@
-#!/bin/zsh
+#!/bin/ksh
 
-source helper.sh
+. ./helper.sh
 
 test_run() {
 
