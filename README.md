@@ -39,14 +39,12 @@ echo $password
 Run unit tests for shell interpreters SH, BASH, ZSH, KSH
 
 ```
-cd tests
-./suite.sh
+make test
 ```
 
 Testing with Docker
 ```
-docker build -t encpass-test .
-docker run --rm -it encpass-test
+make docker-test
 ```
 
 ## Limitations
