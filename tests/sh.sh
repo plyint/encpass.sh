@@ -19,5 +19,5 @@ test_run() {
 
 test_setup
 test_run
-test_taredown
+test_tearedown
 

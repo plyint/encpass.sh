@@ -8,7 +8,7 @@ test_setup() {
 	./test_setup.sh
 }
 
-test_taredown() {
+test_tearedown() {
 	rm pass.enc
 	rm -rf .encpass
 	rm id_rsa.pub.pem
