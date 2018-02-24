@@ -35,6 +35,20 @@ password=$(get_password)
 echo $password
 ```
 
+## Testing
+Run unit tests for shell interpreters SH, BASH, ZSH, KSH
+
+```
+cd tests
+./suite.sh
+```
+
+Testing with Docker
+```
+docker build -t encpass-test .
+docker run --rm -it encpass-test
+```
+
 ## Limitations
 
 Ideally this script can be used in all POSIX compliant shells, but it has only been really tested within BASH.  If you encounter an issue using it in another shell please log an issue and/or submit a pull request for a fix.
