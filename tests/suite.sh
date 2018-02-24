@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 
 printf "\n\nRunning SH test...\n"
 ./sh.sh
