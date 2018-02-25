@@ -1,23 +1,39 @@
 #!/bin/sh
 
-. ./helper.sh
-
 test_run() {
 
 	. ../encpass.sh
 
-	password=$(get_password .)
+	test_print "It should get default secret..."
+	password=$(get_secret generate_default_secret.sh password)
 
-	if [ "$password" = "secret" ]; then
-		echo "SH> SUCCESS"
+	if [ "$password" = "secret1" ]; then
+		test_success
 	else
-		echo "SH> FAILED"
-		exit 1
+		test_failure
+	fi
+
+	test_print "It should get secret from label..."
+	password=$(get_secret generate_named_secret.sh encpass)
+
+	if [ "$password" = "secret2" ]; then
+		test_success
+	else
+		test_failure
+	fi
+
+	test_print "It should get default secret..."
+	password=$(get_secret encpass label)
+
+	if [ "$password" = "secret3" ]; then
+		test_success
+	else
+		test_failure
 	fi
 }
 
+. helpers/helper.sh
+./helpers/test_setup.sh
 
-test_setup
 test_run
-test_tearedown
-
+test_complete

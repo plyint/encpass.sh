@@ -2,4 +2,4 @@
 
 . ../encpass.sh
 
-password=$(set_password)
+password=$(set_secret)
