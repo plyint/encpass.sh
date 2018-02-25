@@ -25,6 +25,10 @@
 ################################################################################
 
 checks() {
+	if [ -n "$ENCPASS_CHECKS" ]; then
+		return
+	fi
+
 	if [ ! -x "$(command -v openssl)" ]; then
 		echo "Error: OpenSSL is not installed or not accessible in the current path." \
 		"Please install it and try again." >&2
@@ -49,6 +53,8 @@ checks() {
 		LABEL=$(basename $0)
 		SECRET_NAME="password"
 	fi
+
+	ENCPASS_CHECKS=1
 }
 
 generate_private_key() {
@@ -59,7 +65,7 @@ generate_private_key() {
 	fi
 
 	if [ ! -f $KEY_DIR/private.key ]; then
-		(umask 0377 && printf "%s" "$(openssl rand 32 -hex)" > $KEY_DIR/private.key)
+		(umask 0377 && printf "%s" "$(openssl rand -hex 32)" > $KEY_DIR/private.key)
 	fi
 }
 
@@ -67,7 +73,7 @@ get_private_key_abs_name() {
 	PRIVATE_KEY_ABS_NAME="$ENCPASS_HOME_DIR/keys/$LABEL/private.key"
 
 	if [ ! -f "$PRIVATE_KEY_ABS_NAME" ]; then
-		generate_private_key $LABEL
+		generate_private_key
 	fi
 }
 
@@ -75,20 +81,22 @@ get_secret_abs_name() {
 	SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/$LABEL/$SECRET_NAME.enc"
 
 	if [ ! -f "$SECRET_ABS_NAME" ]; then
-		set_secret
+		set_secret $1 $2
 	fi
 }
 
 get_secret() {
 	checks $1 $2
 	get_private_key_abs_name
-	get_secret_abs_name
+	get_secret_abs_name $1 $2
 
 	dd if=$SECRET_ABS_NAME ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
 	-d -a -iv $(head -c 32 $SECRET_ABS_NAME) -K $(cat $PRIVATE_KEY_ABS_NAME)
 }
 
 set_secret() {
+	checks $1 $2
+	get_private_key_abs_name
 	SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$LABEL"
 
 	if [ ! -d $SECRET_DIR ]; then
@@ -104,7 +112,7 @@ set_secret() {
 	read -r CSECRET
 	stty echo
 	if [ "$SECRET" = "$CSECRET" ]; then
-		printf "%s" "$(openssl rand 16 -hex)" > \
+		printf "%s" "$(openssl rand -hex 16)" > \
 		$SECRET_DIR/$SECRET_NAME.enc
 
 		echo "$SECRET" | openssl enc -aes-256-cbc -e -a -iv \

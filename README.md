@@ -48,6 +48,14 @@ password=$(get_secret)
 echo $password
 ```
 
+## Testing with Docker
+Run unit tests for shell interpreters SH, BASH, ZSH, KSH in Docker
+
+```
+make test
+```
+
+=======
 ## Important Security Information
 
 While the password is stored encrypted, once the password is decrypted within a script, the script author must take care not to inadvertently expose the password. For example, if you invoke another process from within a script that is using the decrypted password AND you pass the decrypted password to that process, then it would be visible to ps.
