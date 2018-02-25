@@ -118,7 +118,7 @@ set_secret() {
 		$(cat $ENCPASS_HOME_DIR/keys/$LABEL/private.key) 1>> \
 		$SECRET_DIR/$SECRET_NAME.enc
 	else
-		echo "Error: passwords do not match.  Please try again." >&2
+		echo "Error: secrets do not match.  Please try again." >&2
 		exit 1
 	fi
 }
