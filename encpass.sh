@@ -80,7 +80,7 @@ get_secret_abs_name() {
 }
 
 get_secret() {
-	checks
+	checks $1 $2
 	get_private_key_abs_name
 	get_secret_abs_name
 
