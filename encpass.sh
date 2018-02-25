@@ -49,6 +49,8 @@ checks() {
 		LABEL=$(basename $0)
 		SECRET_NAME="password"
 	fi
+
+	ENCPASS_CHECKS=1
 }
 
 generate_private_key() {
@@ -75,21 +77,23 @@ get_secret_abs_name() {
 	SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/$LABEL/$SECRET_NAME.enc"
 
 	if [ ! -f "$SECRET_ABS_NAME" ]; then
-		set_secret
+		set_secret $1 $2
 	fi
 }
 
 get_secret() {
 	checks $1 $2
 	get_private_key_abs_name
-	get_secret_abs_name
+	get_secret_abs_name $1 $2
 
 	dd if=$SECRET_ABS_NAME ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
 	-d -a -iv $(head -c 32 $SECRET_ABS_NAME) -K $(cat $PRIVATE_KEY_ABS_NAME)
 }
 
 set_secret() {
-	checks $1 $2
+	if [ ! -n "$ENCPASS_CHECKS" ]; then
+		checks $1 $2
+	fi
 	get_private_key_abs_name
 	SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$LABEL"
 
