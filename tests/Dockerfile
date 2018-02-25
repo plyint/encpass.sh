@@ -7,7 +7,3 @@ RUN mkdir /opt/encpass
 
 VOLUME /opt/encpass
 
-WORKDIR /opt/encpass/tests
-ENV HOME /opt/encpass/tests
-
-ENTRYPOINT ["./suite.sh"]
