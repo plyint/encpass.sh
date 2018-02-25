@@ -59,7 +59,7 @@ generate_private_key() {
 	fi
 
 	if [ ! -f $KEY_DIR/private.key ]; then
-		printf "%s" "$(openssl rand 32 -hex)" > $KEY_DIR/private.key
+		printf "%s" "$(openssl rand -hex 32)" > $KEY_DIR/private.key
 	fi
 }
 
@@ -67,7 +67,7 @@ get_private_key_abs_name() {
 	PRIVATE_KEY_ABS_NAME="$ENCPASS_HOME_DIR/keys/$LABEL/private.key"
 
 	if [ ! -f "$PRIVATE_KEY_ABS_NAME" ]; then
-		generate_private_key $LABEL
+		generate_private_key
 	fi
 }
 
@@ -89,6 +89,8 @@ get_secret() {
 }
 
 set_secret() {
+	checks $1 $2
+	get_private_key_abs_name
 	SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$LABEL"
 
 	if [ ! -d $SECRET_DIR ]; then
@@ -104,7 +106,7 @@ set_secret() {
 	read -r CSECRET
 	stty echo
 	if [ "$SECRET" = "$CSECRET" ]; then
-		printf "%s" "$(openssl rand 16 -hex)" > \
+		printf "%s" "$(openssl rand -hex 16)" > \
 		$SECRET_DIR/$SECRET_NAME.enc
 
 		echo "$SECRET" | openssl enc -aes-256-cbc -e -a -iv \
