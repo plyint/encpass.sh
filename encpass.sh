@@ -25,6 +25,10 @@
 ################################################################################
 
 checks() {
+	if [ -n "$ENCPASS_CHECKS" ]; then
+		return
+	fi
+
 	if [ ! -x "$(command -v openssl)" ]; then
 		echo "Error: OpenSSL is not installed or not accessible in the current path." \
 		"Please install it and try again." >&2
@@ -61,7 +65,7 @@ generate_private_key() {
 	fi
 
 	if [ ! -f $KEY_DIR/private.key ]; then
-		(umask 0377 && printf "%s" "$(openssl rand 32 -hex)" > $KEY_DIR/private.key)
+		(umask 0377 && printf "%s" "$(openssl rand -hex 32)" > $KEY_DIR/private.key)
 	fi
 }
 
@@ -91,9 +95,7 @@ get_secret() {
 }
 
 set_secret() {
-	if [ ! -n "$ENCPASS_CHECKS" ]; then
-		checks $1 $2
-	fi
+	checks $1 $2
 	get_private_key_abs_name
 	SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$LABEL"
 
