@@ -48,17 +48,13 @@ password=$(get_secret)
 echo $password
 ```
 
-## Testing
-Run unit tests for shell interpreters SH, BASH, ZSH, KSH
+## Testing with Docker
+Run unit tests for shell interpreters SH, BASH, ZSH, KSH in Docker
 
 ```
 make test
 ```
 
-Testing with Docker
-```
-make docker-test
-```
 
 ## Limitations
 
