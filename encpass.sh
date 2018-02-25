@@ -59,7 +59,7 @@ generate_private_key() {
 	fi
 
 	if [ ! -f $KEY_DIR/private.key ]; then
-		printf "%s" "$(openssl rand 32 -hex)" > $KEY_DIR/private.key
+		(umask 0377 && printf "%s" "$(openssl rand 32 -hex)" > $KEY_DIR/private.key)
 	fi
 }
 
