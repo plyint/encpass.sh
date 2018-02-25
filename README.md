@@ -1,6 +1,6 @@
 # encpass.sh
 
-encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using SSH and OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
+encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
 
 This script generates an AES 256 bit symmetric key for each script (or user-defined label) that stores secrets. This key will then be used to encrypt all secrets for that script or label.
 
