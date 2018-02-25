@@ -1,6 +1,8 @@
-#!/bin/sh
-
-prefix=$(basename "$0")
+if [ -n "$ZSH_VERSION" ]; then
+	prefix="zsh.sh"
+else
+	prefix=$(basename "$0")
+fi
 
 if [ -e /tmp/encpass_test_success_count ]; then
 	TEST_SUCCESS_COUNT=$(cat /tmp/encpass_test_success_count)
