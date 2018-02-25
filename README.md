@@ -1,11 +1,17 @@
 # encpass.sh
 
-encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using SSH and OpenSSL. It allows a user to encrypt a password at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date. By default, the SSH public key of the user is used to encrypt the user specified password. The encrypted password is stored in a file in the current directory. This file can then be decrypted to obtain the password using the user's SSH private key. Subsequent calls to get_password will not prompt for a password to be entered as the file with the encrypted password already exists. 
+encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
 
-Note: It will create the following files in the current directory your script is run in:
+This script generates an AES 256 bit symmetric key for each script (or user-defined label) that stores secrets. This key will then be used to encrypt all secrets for that script or label.
 
-* pass.enc (The encrypted password)
-* id_rsa.pub.pem (The PKCS8 version of the public key)
+Subsequent calls to retrieve a secret will not prompt for a secret to be entered as the file with the encrypted value already exists.
+
+Note: encpass.sh sets up a directory (.encpass) under the user's home directory where keys and secrets will be stored.
+
+~/.encpass will contain the following subdirectories:
+
+* keys (Holds the private key for each script or user-defined label)
+* secrets (Holds the secrets stored for each script or user-defined label)
 
 ## Requirements
 
@@ -13,25 +19,32 @@ encpass.sh requires the following software to be installed:
 
 * POSIX compliant shell
 * OpenSSL
-* SSH (uses ssh-keygen)
 
 ## Installation
 
-Clone the repo and copy the encpass.sh script to the directory where your other script resides.
+Download the encpass.sh script and install it to a directory in your path.
+
+Example: curl the script to /usr/local/bin
+```
+$ curl https://raw.githubusercontent.com/ahnick/encpass.sh/master/encpass.sh -o /usr/local/bin/encpass.sh
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  3085  100  3085    0     0   5184      0 --:--:-- --:--:-- --:--:--  5193
+```
 
 ## Usage
 
-Source encpass.sh in your script and call the get_password function.
-
-By default, encpass.sh assumes that the ssh public/private keys are accessible by the user in ~/.ssh.  You can generate unique keys, store them in a different directory, and pass that directory as an argument to this script if you don't want to use your default keys.
+Source encpass.sh in your script and call the get_secret function.
 
 See the test.sh example...
 ```
 #!/bin/sh
-. ./encpass.sh
-password=$(get_password)
-# Call it specifying a directory
-#password=$(get_password ~/.ssh)
+. encpass.sh
+password=$(get_secret)
+# Call it specifying a named secret
+#password=$(get_secret password)
+# Call it specifying a named secret for a specific label
+#password=$(get_secret test.sh password)
 echo $password
 ```
 
@@ -49,6 +62,4 @@ make docker-test
 
 ## Limitations
 
-Ideally this script can be used in all POSIX compliant shells, but it has only been really tested within BASH.  If you encounter an issue using it in another shell please log an issue and/or submit a pull request for a fix.
-
-It is intended that encpass.sh handles one password per directory; therefore, if you have multiple scripts that use **different passwords** that you would like to use encpass.sh for, then you should separate them into different directories.  I'm sure with a little work encpass.sh could be enhanced to track passwords for multiple scripts in the same directory.  Pull requests welcome. :-)
+Ideally this script can be used in all POSIX compliant shells, but it has only been extensively tested in BASH.  If you encounter an issue using it in another shell please log an issue and/or submit a pull request for a fix.

@@ -1,82 +1,116 @@
 #!/bin/sh
 ################################################################################
 # Filename: encpass.sh
-# Description: This script allows a user to encrypt a password at runtime and
-#              then use it, decrypted, within another script. This prevents
-#              shoulder surfing passwords and avoids storing the password in
-#              plain text, which could inadvertently be sent to or discovered
-#              by an individual at a later date. By default, the SSH public key
-#              of the user is used to encrypt the user specified password. 
-#              The encrypted password is stored in a file in the current
-#              directory.  This file can then be decrypted to obtain the
-#              password using the user's SSH private key.  Subsequent calls
-#              to get_password will not prompt for a password to be entered
-#              as the file with the encrypted password already exists.
+# Description: This script allows a user to encrypt a password (or any other
+#              secret) at runtime and then use it, decrypted, within another
+#              script. This prevents shoulder surfing passwords and avoids
+#              storing the password in plain text, which could inadvertently
+#              be sent to or discovered by an individual at a later date.
+#
+#              This script generates an AES 256 bit symmetric key for each
+#              script (or user-defined label) that stores secrets.  This key
+#              will then be used to encrypt all secrets for that script or
+#              label.  encpass.sh sets up a directory (.encpass) under the
+#              user's home directory where keys and secrets will be stored.
+#
+#              Subsequent calls to retrieve a secret will not prompt for a
+#              secret to be entered as the file with the encrypted value
+#              already exists.
 #
 # Author: Xan Nick
 #
-# Note: This assumes both public and private keys reside in the .ssh directory.
-#       You may pass a different directory to pull the keys from as an argument
-#       to the script.
-#
 # Usage: . ./encpass.sh
 #        ...
-#        $password=$(get_password)
+#        $password=$(get_secret)
 ################################################################################
 
-get_key_path() {
-	if [ ! -z "$1" ]; then
-		get_abs_filename "$1"
-	else
-		get_abs_filename ~/.ssh
-	fi
-}
-
-get_password() {
+checks() {
 	if [ ! -x "$(command -v openssl)" ]; then
-		echo "Error: OpenSSL is not installed or not accessible in the current path.  Please install it and try again." >&2
+		echo "Error: OpenSSL is not installed or not accessible in the current path." \
+		"Please install it and try again." >&2
 		exit 1
 	fi
 
-	KEY_PATH=$(get_key_path "$1")
+	ENCPASS_HOME_DIR=$(get_abs_filename ~)/.encpass
 
-	if [ ! -d "$KEY_PATH" ]; then
-		echo "Error: KEY_PATH directory $KEY_PATH not found.  Please check permissions and try again." >&2
-		exit 1
+	if [ ! -d $ENCPASS_HOME_DIR ]; then
+		mkdir -m 700 $ENCPASS_HOME_DIR
+		mkdir -m 700 $ENCPASS_HOME_DIR/keys
+		mkdir -m 700 $ENCPASS_HOME_DIR/secrets
 	fi
 
-	# Create a PKCS8 version of the public key in the current directory if one does not already exist
-	if [ ! -e id_rsa.pub.pem ]; then
-		if [ ! -x "$(command -v ssh-keygen)" ]; then
-			echo "ssh-keygen is needed to generate a PKCS8 version of your public key.  Please install it and try again." >&2
-		fi
-
-		ssh-keygen -f "$KEY_PATH/id_rsa.pub" -e -m PKCS8 > id_rsa.pub.pem
-
-		if [ ! -f id_rsa.pub.pem ]; then
-			echo "Failed to create PKCS8 version of the public key.  Please check permissions and try again." >&2
-			exit 1
-		fi
+	if [ ! -z $1 ] && [ ! -z $2 ]; then
+		LABEL=$1
+		SECRET_NAME=$2
+	elif [ ! -z $1 ]; then
+		LABEL=$(basename $0)
+		SECRET_NAME=$1
+	else
+		LABEL=$(basename $0)
+		SECRET_NAME="password"
 	fi
-
-	if [ ! -f pass.enc ]; then
-		set_password
-	fi
-
-	openssl rsautl -decrypt -ssl -inkey "$KEY_PATH/id_rsa" -in pass.enc
 }
 
-set_password() {
-	echo "Enter your Password:" >&2
+generate_private_key() {
+	KEY_DIR="$ENCPASS_HOME_DIR/keys/$LABEL"
+
+	if [ ! -d $KEY_DIR ]; then
+		mkdir -m 700 $KEY_DIR
+	fi
+
+	if [ ! -f $KEY_DIR/private.key ]; then
+		printf "%s" "$(openssl rand 32 -hex)" > $KEY_DIR/private.key
+	fi
+}
+
+get_private_key_abs_name() {
+	PRIVATE_KEY_ABS_NAME="$ENCPASS_HOME_DIR/keys/$LABEL/private.key"
+
+	if [ ! -f "$PRIVATE_KEY_ABS_NAME" ]; then
+		generate_private_key $LABEL
+	fi
+}
+
+get_secret_abs_name() {
+	SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/$LABEL/$SECRET_NAME.enc"
+
+	if [ ! -f "$SECRET_ABS_NAME" ]; then
+		set_secret
+	fi
+}
+
+get_secret() {
+	checks $1 $2
+	get_private_key_abs_name
+	get_secret_abs_name
+
+	dd if=$SECRET_ABS_NAME ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
+	-d -a -iv $(head -c 32 $SECRET_ABS_NAME) -K $(cat $PRIVATE_KEY_ABS_NAME)
+}
+
+set_secret() {
+	SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$LABEL"
+
+	if [ ! -d $SECRET_DIR ]; then
+		mkdir -m 700 $SECRET_DIR
+	fi
+
+	echo "Enter $SECRET_NAME:" >&2
 	stty -echo
-	read -r PASSWORD
+	read -r SECRET
 	stty echo
-	echo "Confirm your Password:" >&2
+	echo "Confirm $SECRET_NAME:" >&2
 	stty -echo
-	read -r CPASSWORD
+	read -r CSECRET
 	stty echo
-	if [ "$PASSWORD" = "$CPASSWORD" ]; then
-		echo "$PASSWORD" | openssl rsautl -encrypt -pubin -inkey id_rsa.pub.pem -out pass.enc
+	if [ "$SECRET" = "$CSECRET" ]; then
+		printf "%s" "$(openssl rand 16 -hex)" > \
+		$SECRET_DIR/$SECRET_NAME.enc
+
+		echo "$SECRET" | openssl enc -aes-256-cbc -e -a -iv \
+		$(cat $SECRET_DIR/$SECRET_NAME.enc) -K \
+		$(cat $ENCPASS_HOME_DIR/keys/$LABEL/private.key) 1>> \
+		$SECRET_DIR/$SECRET_NAME.enc
 	else
 		echo "Error: passwords do not match.  Please try again." >&2
 		exit 1
