@@ -47,10 +47,10 @@ checks() {
 		LABEL=$1
 		SECRET_NAME=$2
 	elif [ ! -z $1 ]; then
-		LABEL=$(basename $0)
+		LABEL=$(basename "$0")
 		SECRET_NAME=$1
 	else
-		LABEL=$(basename $0)
+		LABEL=$(basename "$0")
 		SECRET_NAME="password"
 	fi
 
