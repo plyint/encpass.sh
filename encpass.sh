@@ -31,7 +31,7 @@ checks() {
 
 	if [ ! -x "$(command -v openssl)" ]; then
 		echo "Error: OpenSSL is not installed or not accessible in the current path." \
-		"Please install it and try again." >&2
+			"Please install it and try again." >&2
 		exit 1
 	fi
 
@@ -65,7 +65,7 @@ generate_private_key() {
 	fi
 
 	if [ ! -f "$KEY_DIR/private.key" ]; then
-		(umask 0377 && printf "%s" "$(openssl rand -hex 32)" > "$KEY_DIR/private.key")
+		(umask 0377 && printf "%s" "$(openssl rand -hex 32)" >"$KEY_DIR/private.key")
 	fi
 }
 
@@ -90,8 +90,8 @@ get_secret() {
 	get_private_key_abs_name
 	get_secret_abs_name "$1" "$2"
 
-	dd if="$SECRET_ABS_NAME" ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
-	-d -a -iv "$(head -c 32 "$SECRET_ABS_NAME")" -K "$(cat "$PRIVATE_KEY_ABS_NAME")"
+	dd if="$SECRET_ABS_NAME" ibs=1 skip=32 2>/dev/null | openssl enc -aes-256-cbc \
+		-d -a -iv "$(head -c 32 "$SECRET_ABS_NAME")" -K "$(cat "$PRIVATE_KEY_ABS_NAME")"
 }
 
 set_secret() {
@@ -112,14 +112,12 @@ set_secret() {
 	read -r CSECRET
 	stty echo
 	if [ "$SECRET" = "$CSECRET" ]; then
-		printf "%s" "$(openssl rand -hex 16)" > \
-		"$SECRET_DIR/$SECRET_NAME.enc"
+		printf "%s" "$(openssl rand -hex 16)" >"$SECRET_DIR/$SECRET_NAME.enc"
 
 		echo "$SECRET" | openssl enc -aes-256-cbc -e -a -iv \
-		"$(cat "$SECRET_DIR/$SECRET_NAME.enc")" -K \
-		"$(cat "$ENCPASS_HOME_DIR/keys/$LABEL/private.key")" 1>> \
-		"$SECRET_DIR/$SECRET_NAME.enc_" \
-		&& mv "$SECRET_DIR/$SECRET_NAME.enc_" "$SECRET_DIR/$SECRET_NAME.enc"
+			"$(cat "$SECRET_DIR/$SECRET_NAME.enc")" -K \
+			"$(cat "$ENCPASS_HOME_DIR/keys/$LABEL/private.key")" 1>>"$SECRET_DIR/$SECRET_NAME.enc_" &&
+			mv "$SECRET_DIR/$SECRET_NAME.enc_" "$SECRET_DIR/$SECRET_NAME.enc"
 	else
 		echo "Error: secrets do not match.  Please try again." >&2
 		exit 1
@@ -132,7 +130,7 @@ get_abs_filename() {
 	parentdir=$(dirname "${filename}")
 
 	if [ -d "${filename}" ]; then
-	        # shellcheck disable=SC2005
+		# shellcheck disable=SC2005
 		echo "$(cd "${filename}" && pwd)"
 	elif [ -d "${parentdir}" ]; then
 		echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
