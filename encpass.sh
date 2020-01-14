@@ -114,10 +114,10 @@ set_secret() {
 	if [ "$SECRET" = "$CSECRET" ]; then
 		printf "%s" "$(openssl rand -hex 16)" >"$SECRET_DIR/$SECRET_NAME.enc"
 
-		# shellcheck disable=SC2094
 		echo "$SECRET" | openssl enc -aes-256-cbc -e -a -iv \
 			"$(cat "$SECRET_DIR/$SECRET_NAME.enc")" -K \
-			"$(cat "$ENCPASS_HOME_DIR/keys/$LABEL/private.key")" 1>>"$SECRET_DIR/$SECRET_NAME.enc"
+			"$(cat "$ENCPASS_HOME_DIR/keys/$LABEL/private.key")" 1>>\
+				"$SECRET_DIR/$SECRET_NAME.enc"
 	else
 		echo "Error: secrets do not match.  Please try again." >&2
 		exit 1
@@ -130,7 +130,6 @@ get_abs_filename() {
 	parentdir=$(dirname "${filename}")
 
 	if [ -d "${filename}" ]; then
-		# shellcheck disable=SC2005
 		echo "$(cd "${filename}" && pwd)"
 	elif [ -d "${parentdir}" ]; then
 		echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
