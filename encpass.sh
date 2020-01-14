@@ -31,22 +31,22 @@ checks() {
 
 	if [ ! -x "$(command -v openssl)" ]; then
 		echo "Error: OpenSSL is not installed or not accessible in the current path." \
-		"Please install it and try again." >&2
+			"Please install it and try again." >&2
 		exit 1
 	fi
 
 	ENCPASS_HOME_DIR=$(get_abs_filename ~)/.encpass
 
-	if [ ! -d $ENCPASS_HOME_DIR ]; then
-		mkdir -m 700 $ENCPASS_HOME_DIR
-		mkdir -m 700 $ENCPASS_HOME_DIR/keys
-		mkdir -m 700 $ENCPASS_HOME_DIR/secrets
+	if [ ! -d "$ENCPASS_HOME_DIR" ]; then
+		mkdir -m 700 "$ENCPASS_HOME_DIR"
+		mkdir -m 700 "$ENCPASS_HOME_DIR/keys"
+		mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
 	fi
 
-	if [ ! -z $1 ] && [ ! -z $2 ]; then
+	if [ -n "$1" ] && [ -n "$2" ]; then
 		LABEL=$1
 		SECRET_NAME=$2
-	elif [ ! -z $1 ]; then
+	elif [ -n "$1" ]; then
 		LABEL=$(basename "$0")
 		SECRET_NAME=$1
 	else
@@ -60,12 +60,12 @@ checks() {
 generate_private_key() {
 	KEY_DIR="$ENCPASS_HOME_DIR/keys/$LABEL"
 
-	if [ ! -d $KEY_DIR ]; then
-		mkdir -m 700 $KEY_DIR
+	if [ ! -d "$KEY_DIR" ]; then
+		mkdir -m 700 "$KEY_DIR"
 	fi
 
-	if [ ! -f $KEY_DIR/private.key ]; then
-		(umask 0377 && printf "%s" "$(openssl rand -hex 32)" > $KEY_DIR/private.key)
+	if [ ! -f "$KEY_DIR/private.key" ]; then
+		(umask 0377 && printf "%s" "$(openssl rand -hex 32)" >"$KEY_DIR/private.key")
 	fi
 }
 
@@ -81,26 +81,26 @@ get_secret_abs_name() {
 	SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/$LABEL/$SECRET_NAME.enc"
 
 	if [ ! -f "$SECRET_ABS_NAME" ]; then
-		set_secret $1 $2
+		set_secret "$1" "$2"
 	fi
 }
 
 get_secret() {
-	checks $1 $2
+	checks "$1" "$2"
 	get_private_key_abs_name
-	get_secret_abs_name $1 $2
+	get_secret_abs_name "$1" "$2"
 
-	dd if=$SECRET_ABS_NAME ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
-	-d -a -iv $(head -c 32 $SECRET_ABS_NAME) -K $(cat $PRIVATE_KEY_ABS_NAME)
+	dd if="$SECRET_ABS_NAME" ibs=1 skip=32 2>/dev/null | openssl enc -aes-256-cbc \
+		-d -a -iv "$(head -c 32 "$SECRET_ABS_NAME")" -K "$(cat "$PRIVATE_KEY_ABS_NAME")"
 }
 
 set_secret() {
-	checks $1 $2
+	checks "$1" "$2"
 	get_private_key_abs_name
 	SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$LABEL"
 
-	if [ ! -d $SECRET_DIR ]; then
-		mkdir -m 700 $SECRET_DIR
+	if [ ! -d "$SECRET_DIR" ]; then
+		mkdir -m 700 "$SECRET_DIR"
 	fi
 
 	echo "Enter $SECRET_NAME:" >&2
@@ -112,13 +112,12 @@ set_secret() {
 	read -r CSECRET
 	stty echo
 	if [ "$SECRET" = "$CSECRET" ]; then
-		printf "%s" "$(openssl rand -hex 16)" > \
-		$SECRET_DIR/$SECRET_NAME.enc
+		printf "%s" "$(openssl rand -hex 16)" >"$SECRET_DIR/$SECRET_NAME.enc"
 
 		echo "$SECRET" | openssl enc -aes-256-cbc -e -a -iv \
-		$(cat $SECRET_DIR/$SECRET_NAME.enc) -K \
-		$(cat $ENCPASS_HOME_DIR/keys/$LABEL/private.key) 1>> \
-		$SECRET_DIR/$SECRET_NAME.enc
+			"$(cat "$SECRET_DIR/$SECRET_NAME.enc")" -K \
+			"$(cat "$ENCPASS_HOME_DIR/keys/$LABEL/private.key")" 1>>\
+				"$SECRET_DIR/$SECRET_NAME.enc"
 	else
 		echo "Error: secrets do not match.  Please try again." >&2
 		exit 1
