@@ -1,24 +1,26 @@
 # encpass.sh
 
-encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within another script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
+encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within a script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
 
-This script generates an AES 256 bit symmetric key for each script (or user-defined label) that stores secrets. This key will then be used to encrypt all secrets for that script or label.
+This script generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.
 
 Subsequent calls to retrieve a secret will not prompt for a secret to be entered as the file with the encrypted value already exists.
 
-Note: encpass.sh sets up a directory (.encpass) under the user's home directory where keys and secrets will be stored.
+Note: By default, encpass.sh sets up a directory (.encpass) under the user's home directory where keys and secrets will be stored.  This directory can be overridden by setting the environment variable ENCPASS_HOME_DIR to a directory of your choice.
 
-~/.encpass will contain the following subdirectories:
+~/.encpass (or the directory specified by ENCPASS_HOME_DIR) will contain the following subdirectories:
 
-* keys (Holds the private key for each script or user-defined label)
-* secrets (Holds the secrets stored for each script or user-defined label)
+* keys (Holds the private key for each script or user-defined bucket)
+* secrets (Holds the secrets stored for each script or user-defined bucket)
 
 ## Requirements
 
 encpass.sh requires the following software to be installed:
 
-* POSIX compliant shell
+* POSIX compliant shell environment (sh, bash, ksh, zsh)
 * OpenSSL
+
+Note: Even if you use fish or other types of modern shells, encpass.sh should still be usable as those shells typically support running POSIX compliant scripts.  You just won't be able to include encpass.sh in any fish specific scripts or other non-POSIX compliant scripts.
 
 ## Installation
 
@@ -36,7 +38,7 @@ $ curl https://raw.githubusercontent.com/ahnick/encpass.sh/master/encpass.sh -o 
 
 Source encpass.sh in your script and call the get_secret function.
 
-See the test.sh example...
+See the example.sh sample script...
 ```
 #!/bin/sh
 . encpass.sh
@@ -48,23 +50,42 @@ password=$(get_secret)
 echo $password
 ```
 
-## Testing with Docker
-Run unit tests for shell interpreters SH, BASH, ZSH, KSH in Docker
+encpass.sh also provides a command line interface to perform the following management functions:
+- Add secrets/buckets
+- Remove secrets/buckets
+- List secrets/buckets
+- Show secrets/bucket
+- Lock/Unlock all keys for buckets
 
+For example...
+```
+$ ./encpass.sh ls example.sh
+password
+```
+
+## Configuration
+By default encpass.sh will create a hidden directory in the user's home directory to store all it's data (keys and secrets) in.  A different directory can be specified by setting the $ENCPASS_HOME_DIR environment variable.
+
+For example, you might decide you'd like to store this on encrypted filesystem or networked mount point such as KBFS (Keybase Filesystem).  If so, then you could place the following line (substituting your own username) in your ~/.bashrc or ~/.bash_profile
+```
+export ENCPASS_HOME_DIR=/keybase/private/<USERNAME>/.encpass
+```
+
+## Testing with Docker
+encpass.sh strives to be usable in all POSIX compliant shell environments (i.e. SH, BASH, ZSH, KSH).  To verify changes to the file have not broken anything, you can run the bundled unit tests with the repo using make. 
 ```
 make test
 ```
 
-=======
 ## Important Security Information
 
-While the password is stored encrypted, once the password is decrypted within a script, the script author must take care not to inadvertently expose the password. For example, if you invoke another process from within a script that is using the decrypted password AND you pass the decrypted password to that process, then it would be visible to ps.
+Although encpass.sh encrypts every secret on disk within the user's home directory, once the password is decrypted within a script, the script author must take care not to inadvertently expose the password. For example, if you invoke another process from within a script that is using the decrypted password AND you pass the decrypted password to that process, then it would be visible to ps.
 
 Imagine a script like the following...
 ```
 #!/bin/sh
 . ./encpass.sh
-password=$(get_password)
+password=$(get_secret)
 watch whatever.sh --pass=$password &
 ps -A
 ```
@@ -73,7 +94,3 @@ Upon executing you should see the password in the ps output...
 ```
 97349 ??         9:56.30 watch whatever.sh --pass=P@$$w0rd
 ```
-
-## Limitations
-
-Ideally this script can be used in all POSIX compliant shells, but it has only been extensively tested in BASH.  If you encounter an issue using it in another shell please log an issue and/or submit a pull request for a fix.
