@@ -64,15 +64,15 @@ password
 ```
 
 ## Configuration
-By default encpass.sh will create a hidden directory in the user's home directory to store all it's data (keys and secrets) in.  A different directory can be specified by setting the $ENCPASS_HOME_DIR environment variable.
+By default encpass.sh will create a hidden directory in the user's home directory to store all it's data (keys and secrets) in.  A different directory can be specified by setting the ENCPASS_HOME_DIR environment variable.
 
-For example, you might decide you'd like to store this on encrypted filesystem or networked mount point such as KBFS (Keybase Filesystem).  If so, then you could place the following line (substituting your own username) in your ~/.bashrc or ~/.bash_profile
+For example, you could store the .encpass directory on an encrypted filesystem or networked mount point such as KBFS (Keybase Filesystem).  To do this you can place the following line (substituting your own username) in your ~/.bashrc or ~/.bash_profile, so that everytime you start a shell encpass.sh will point to this location for the .encpass directory.
 ```
 export ENCPASS_HOME_DIR=/keybase/private/<USERNAME>/.encpass
 ```
 
 ## Testing with Docker
-encpass.sh strives to be usable in all POSIX compliant shell environments (i.e. SH, BASH, ZSH, KSH).  To verify changes to the file have not broken anything, you can run the bundled unit tests with the repo using make. 
+encpass.sh strives to be usable in all POSIX compliant shell environments (i.e. SH, BASH, ZSH, KSH).  To verify changes to the script have not broken compliance, you can run the bundled unit tests with the repo using make. 
 ```
 make test
 ```
