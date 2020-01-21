@@ -342,8 +342,8 @@ COMMANDS:
         to using an "add -f" command, but it has a safety check to only 
         proceed if the specified secret exists.  If the secret, does not
         already exist, then an error will be reported. There is no forceable
-				update implemented.  Use "add -f" for any required forceable update
-				scenarios.
+        update implemented.  Use "add -f" for any required forceable update
+        scenarios.
 
     unlock
         Unlocks all the keys for encpass.sh.  The user will be prompted to 
@@ -377,8 +377,10 @@ case "$1" in
 			fi
 
 			for ENCPASS_ADD_F in $ENCPASS_ADD_LIST; do
-				if [ -f "$ENCPASS_ADD_F/"$2".enc" ]; then
-					echo "Warning: A secret with the name \"$2\" already exists for bucket $ENCPASS_ADD_F."
+				ENCPASS_ADD_DIR="$(basename "$ENCPASS_ADD_F")"
+				ENCPASS_BUCKET="$ENCPASS_ADD_DIR"
+				if [ ! -n "$ENCPASS_FORCE_ADD" ] && [ -f "$ENCPASS_ADD_F/"$2".enc" ]; then
+					echo "Warning: A secret with the name \"$2\" already exists for bucket $ENCPASS_BUCKET."
 					echo "Would you like to overwrite the value? [y/N]"
 
 					ENCPASS_CONFIRM="$(encpass_getche)"
@@ -388,8 +390,6 @@ case "$1" in
 				fi
 
 				ENCPASS_SECRET_NAME="$2"
-				ENCPASS_ADD_DIR="$(basename "$ENCPASS_ADD_F")"
-				ENCPASS_BUCKET="$ENCPASS_ADD_DIR"
 				echo "Adding secret \"$ENCPASS_SECRET_NAME\" to bucket \"$ENCPASS_BUCKET\"..."
 				set_secret "$ENCPASS_BUCKET" "$ENCPASS_SECRET_NAME" "reuse"
 			done
