@@ -50,6 +50,8 @@ password=$(get_secret)
 echo $password
 ```
 
+## Command Line Management
+
 encpass.sh also provides a command line interface to perform the following management functions:
 - Add secrets/buckets
 - Remove secrets/buckets
@@ -57,10 +59,15 @@ encpass.sh also provides a command line interface to perform the following manag
 - Show secrets/bucket
 - Lock/Unlock all keys for buckets
 
-For example...
+For example, the following command will list the secrets stored for example.sh:
 ```
 $ ./encpass.sh ls example.sh
 password
+```
+
+Use the following command to list all commands along with their descriptions:
+```
+$ ./encpass.sh ?
 ```
 
 ## Configuration
