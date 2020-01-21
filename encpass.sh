@@ -456,7 +456,7 @@ case "$1" in
 					fi
 
 					for ENCPASS_REMOVE_F in $ENCPASS_REMOVE_LIST; do
-						ENCPASS_SECRET_NAME="$2"
+						ENCPASS_SECRET="$2"
 						encpass_remove $ENCPASS_REMOVE_F
 					done
 				else
