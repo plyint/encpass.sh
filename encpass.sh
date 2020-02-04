@@ -31,7 +31,7 @@ encpass_checks() {
 		exit 1
 	fi
 
-	if [ -z $ENCPASS_HOME_DIR ]; then
+	if [ -z "$ENCPASS_HOME_DIR" ]; then
 		ENCPASS_HOME_DIR=$(encpass_get_abs_filename ~)/.encpass
 	fi
 
@@ -41,8 +41,8 @@ encpass_checks() {
 		mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
 	fi
 
-	if [ "$(basename $0)" != "encpass.sh" ]; then
-		encpass_include_init $1 $2
+	if [ "$(basename "$0")" != "encpass.sh" ]; then
+		encpass_include_init "$1" "$2"
 	fi
 
 	ENCPASS_CHECKS=1
@@ -85,7 +85,7 @@ encpass_get_private_key_abs_name() {
 }
 
 encpass_get_secret_abs_name() {
-	ENCPASS_SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/"$ENCPASS_BUCKET"/"$ENCPASS_SECRET_NAME".enc"
+	ENCPASS_SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/$ENCPASS_BUCKET/$ENCPASS_SECRET_NAME.enc"
 
 	if [ "$3" != "nocreate" ]; then 
 		if [ ! -f "$ENCPASS_SECRET_ABS_NAME" ]; then
@@ -125,8 +125,10 @@ set_secret() {
 
 		printf "%s" "$(openssl rand -hex 16)" >"$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc"
 
+		ENCPASS_OPENSSL_IV="$(cat "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc")"
+
 		echo "$ENCPASS_SECRET_INPUT" | openssl enc -aes-256-cbc -e -a -iv \
-			"$(cat "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc")" -K \
+			"$ENCPASS_OPENSSL_IV" -K \
 			"$(cat "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.key")" 1>> \
 					"$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc"
 	else
@@ -141,15 +143,21 @@ encpass_get_abs_filename() {
 	parentdir="$(dirname "${filename}")"
 
 	if [ -d "${filename}" ]; then
-		echo "$(cd "${filename}" && pwd)"
+		cd "${filename}" && pwd
 	elif [ -d "${parentdir}" ]; then
-		echo "$(cd "${parentdir}" && pwd)/"$(basename "${filename}")""
+		echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
 	fi
 }
 
 encpass_decrypt_secret() {
-	dd if="$ENCPASS_SECRET_ABS_NAME" ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
-		-d -a -iv "$(head -c 32 "$ENCPASS_SECRET_ABS_NAME")" -K "$(cat "$ENCPASS_PRIVATE_KEY_ABS_NAME")"
+	if [ -f "$ENCPASS_PRIVATE_KEY_ABS_NAME" ]; then
+		dd if="$ENCPASS_SECRET_ABS_NAME" ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
+			-d -a -iv "$(head -c 32 "$ENCPASS_SECRET_ABS_NAME")" -K "$(cat "$ENCPASS_PRIVATE_KEY_ABS_NAME")" 2> /dev/null
+	elif [ -f "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.lock" ]; then
+		echo "**Locked**"
+	else
+		echo "Error: Unable to decrypt"
+	fi
 }
 
 
@@ -169,32 +177,28 @@ encpass_show_secret() {
 	ENCPASS_BUCKET=$1
 
 	encpass_get_private_key_abs_name "nogenerate"
-	if [ -z $ENCPASS_PRIVATE_KEY_ABS_NAME ]; then
-		echo "No key found for bucket $1."
-		exit 1
-	fi
 
-	if [ ! -z $2 ]; then
+	if [ ! -z "$2" ]; then
 		ENCPASS_SECRET_NAME=$2
-		encpass_get_secret_abs_name $1 $2 "nocreate"
-		if [ -z $ENCPASS_SECRET_ABS_NAME ]; then
+		encpass_get_secret_abs_name "$1" "$2" "nocreate"
+		if [ -z "$ENCPASS_SECRET_ABS_NAME" ]; then
 			echo "No secret named $2 found for bucket $1."
 			exit 1
 		fi
 
-		echo $(encpass_decrypt_secret)
+		encpass_decrypt_secret
 	else
-		ENCPASS_FILE_LIST=$(ls -1 $ENCPASS_HOME_DIR/secrets/$1)
+		ENCPASS_FILE_LIST=$(ls -1 "$ENCPASS_HOME_DIR"/secrets/"$1")
 		for ENCPASS_F in $ENCPASS_FILE_LIST; do
-			ENCPASS_SECRET_NAME=$(basename $ENCPASS_F .enc)
+			ENCPASS_SECRET_NAME=$(basename "$ENCPASS_F" .enc)
 			
-			encpass_get_secret_abs_name $1 $ENCPASS_SECRET_NAME "nocreate"
-			if [ -z $ENCPASS_SECRET_ABS_NAME ]; then
+			encpass_get_secret_abs_name "$1" "$ENCPASS_SECRET_NAME" "nocreate"
+			if [ -z "$ENCPASS_SECRET_ABS_NAME" ]; then
 				echo "No secret named $ENCPASS_SECRET_NAME found for bucket $1."
 				exit 1
 			fi
 
-			echo $ENCPASS_SECRET_NAME = $(encpass_decrypt_secret)
+			echo "$ENCPASS_SECRET_NAME = $(encpass_decrypt_secret)"
 		done
 	fi
 }
@@ -202,19 +206,20 @@ encpass_show_secret() {
 encpass_getche() {
         old=$(stty -g)
         stty raw min 1 time 0
-        printf '%s' $(dd bs=1 count=1 2>/dev/null)
-        stty $old
+        printf '%s' "$(dd bs=1 count=1 2>/dev/null)"
+        stty "$old"
 }
 
 encpass_remove() {
 	if [ ! -n "$ENCPASS_FORCE_REMOVE" ]; then
 		if [ ! -z "$ENCPASS_SECRET" ]; then
-			echo "Are you sure you want to remove the secret $ENCPASS_SECRET from $ENCPASS_BUCKET? [y/N]"
+			printf "Are you sure you want to remove the secret \"%s\" from bucket \"%s\"? [y/N]" "$ENCPASS_SECRET" "$ENCPASS_BUCKET"
 		else
-			echo "Are you sure you want to remove the bucket $ENCPASS_BUCKET? [y/N]"
+			printf "Are you sure you want to remove the bucket \"%s?\" [y/N]" "$ENCPASS_BUCKET"
 		fi
 
 		ENCPASS_CONFIRM="$(encpass_getche)"
+		printf "\n"
 		if [ "$ENCPASS_CONFIRM" != "Y" ] && [ "$ENCPASS_CONFIRM" != "y" ]; then
 			exit 0
 		fi
@@ -222,11 +227,11 @@ encpass_remove() {
 
 	if [ ! -z "$ENCPASS_SECRET" ]; then
 		rm -f "$1"
-		echo "\nSecret $ENCPASS_SECRET removed from bucket $ENCPASS_BUCKET."
+		printf "Secret \"%s\" removed from bucket \"%s\".\n" "$ENCPASS_SECRET" "$ENCPASS_BUCKET"
 	else
-		rm -Rf "$ENCPASS_HOME_DIR/keys/"$ENCPASS_BUCKET""
-		rm -Rf "$ENCPASS_HOME_DIR/secrets/"$ENCPASS_BUCKET""
-		echo "\nBucket $ENCPASS_BUCKET removed."
+		rm -Rf "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET"
+		rm -Rf "$ENCPASS_HOME_DIR/secrets/$ENCPASS_BUCKET"
+		printf "Bucket \"%s\" removed.\n" "$ENCPASS_BUCKET"
 	fi
 }
 
@@ -349,6 +354,9 @@ COMMANDS:
         Unlocks all the keys for encpass.sh.  The user will be prompted to 
         enter the password and confirm it.
 
+    dir
+        Prints out the current value of the ENCPASS_HOME_DIR environment variable.
+
     help|--help|usage|--usage|?
         Display this help message.
 EOF
@@ -371,6 +379,8 @@ case "$1" in
 		fi
 
 		if [ ! -z "$1" ] && [ ! -z "$2" ]; then
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
 			ENCPASS_ADD_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
 			if [ -z "$ENCPASS_ADD_LIST" ]; then
 				ENCPASS_ADD_LIST="$1"
@@ -379,7 +389,7 @@ case "$1" in
 			for ENCPASS_ADD_F in $ENCPASS_ADD_LIST; do
 				ENCPASS_ADD_DIR="$(basename "$ENCPASS_ADD_F")"
 				ENCPASS_BUCKET="$ENCPASS_ADD_DIR"
-				if [ ! -n "$ENCPASS_FORCE_ADD" ] && [ -f "$ENCPASS_ADD_F/"$2".enc" ]; then
+				if [ ! -n "$ENCPASS_FORCE_ADD" ] && [ -f "$ENCPASS_ADD_F/$2.enc" ]; then
 					echo "Warning: A secret with the name \"$2\" already exists for bucket $ENCPASS_BUCKET."
 					echo "Would you like to overwrite the value? [y/N]"
 
@@ -405,9 +415,13 @@ case "$1" in
 		if [ ! -z "$1" ] && [ ! -z "$2" ]; then
 
 			ENCPASS_SECRET_NAME="$2"
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
 			ENCPASS_UPDATE_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
 
 			for ENCPASS_UPDATE_F in $ENCPASS_UPDATE_LIST; do
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
 				if [ -f "$ENCPASS_UPDATE_F/"$2".enc" ]; then
 						ENCPASS_UPDATE_DIR="$(basename "$ENCPASS_UPDATE_F")"
 						ENCPASS_BUCKET="$ENCPASS_UPDATE_DIR"
@@ -437,27 +451,31 @@ case "$1" in
 			shift $((OPTIND-1))
 		fi
 
-		if [ -z $1 ]; then 
+		if [ -z "$1" ]; then 
 			echo "Error: A bucket must be specified for removal."
 		fi
 
+		# Allow globbing
+		# shellcheck disable=SC2027,SC2086
 		ENCPASS_REMOVE_BKT_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
 		if [ ! -z "$ENCPASS_REMOVE_BKT_LIST" ]; then
 			for ENCPASS_REMOVE_B in $ENCPASS_REMOVE_BKT_LIST; do
 
 				ENCPASS_BUCKET="$(basename "$ENCPASS_REMOVE_B")"
-				if [ ! -z $2 ]; then
+				if [ ! -z "$2" ]; then
 					# Removing secrets for a specified bucket
+					# Allow globbing
+					# shellcheck disable=SC2027,SC2086
 					ENCPASS_REMOVE_LIST="$(ls -1p "$ENCPASS_REMOVE_B/"$2".enc" 2>/dev/null)"
 
-					if [ -z $ENCPASS_REMOVE_LIST ]; then
+					if [ -z "$ENCPASS_REMOVE_LIST" ]; then
 						echo "Error: No secrets found for $2 in bucket $ENCPASS_BUCKET."
 						exit 1
 					fi
 
 					for ENCPASS_REMOVE_F in $ENCPASS_REMOVE_LIST; do
 						ENCPASS_SECRET="$2"
-						encpass_remove $ENCPASS_REMOVE_F
+						encpass_remove "$ENCPASS_REMOVE_F"
 					done
 				else
 					# Removing a specified bucket
@@ -480,10 +498,14 @@ case "$1" in
 		fi
 
 		if [ ! -z "$2" ]; then
-			if [ -f "$(encpass_get_abs_filename "$ENCPASS_HOME_DIR/secrets/"$ENCPASS_SHOW_DIR"/"$2".enc")" ]; then
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			if [ -f "$(encpass_get_abs_filename "$ENCPASS_HOME_DIR/secrets/$ENCPASS_SHOW_DIR/"$2".enc")" ]; then
 				encpass_show_secret "$ENCPASS_SHOW_DIR" "$2"
 			fi
 		else
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
 			ENCPASS_SHOW_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$ENCPASS_SHOW_DIR"" 2>/dev/null)"
 
 			if [ -z "$ENCPASS_SHOW_LIST" ]; then
@@ -507,9 +529,13 @@ case "$1" in
 		shift
 		encpass_checks
 		if [ ! -z "$1" ]; then
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
 			ENCPASS_FILE_LIST="$(ls -1p "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
 
 			if [ -z "$ENCPASS_FILE_LIST" ]; then
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
 				ENCPASS_DIR_EXISTS="$(ls -d "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
 				if [ ! -z "$ENCPASS_DIR_EXISTS" ]; then
 					echo "Bucket $1 is empty."
@@ -519,18 +545,22 @@ case "$1" in
 				exit 1
 			fi
 
+			ENCPASS_NL=""
 			for ENCPASS_F in $ENCPASS_FILE_LIST; do
 				if [ -d "${ENCPASS_F%:}" ]; then
-					echo "\n$(basename "$ENCPASS_F")"
+					printf "$ENCPASS_NL%s\n" "$(basename "$ENCPASS_F")"
+					ENCPASS_NL="\n"
 				else
-					basename "$ENCPASS_F" .enc
+					printf "%s\n" "$(basename "$ENCPASS_F" .enc)"
 				fi
 			done
 		else
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
 			ENCPASS_BUCKET_LIST="$(ls -1p "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
 			for ENCPASS_C in $ENCPASS_BUCKET_LIST; do
 				if [ -d "${ENCPASS_C%:}" ]; then
-					echo "\n$(basename "$ENCPASS_C")"
+					printf "\n%s" "\n$(basename "$ENCPASS_C")"
 				else
 					basename "$ENCPASS_C" .enc
 				fi
@@ -541,22 +571,23 @@ case "$1" in
 		shift
 		encpass_checks
 
-		echo "WARNING: You are about to lock your keys with a password." >&2
+		echo "********************!!!WARNING!!!*********************" >&2
+		echo "You are about to lock your keys with a password." >&2
 		echo "You will not be able to use your secrets again until you" >&2
 		echo "unlock the keys with the same password. It is important " >&2
 		echo "that you securely store the password, so you can recall it" >&2
 		echo "in the future.  If you forget your password you will no" >&2
 		echo "longer be able to access your secrets." >&2
+		echo "********************!!!WARNING!!!*********************" >&2
 
-		echo "\nAbout to lock keys held in $ENCPASS_HOME_DIR/keys/"
+		printf "\n%s\n" "About to lock keys held in directory $ENCPASS_HOME_DIR/keys/"
 
-		echo "\nEnter Password to lock keys:" >&2
+		printf "\nEnter Password to lock keys:" >&2
 		stty -echo
 		read -r ENCPASS_KEY_PASS
-		stty echo
-		echo "Confirm Password:" >&2
-		stty -echo
+		printf "\nConfirm Password:" >&2
 		read -r ENCPASS_CKEY_PASS
+		printf "\n"
 		stty echo
 
 		if [ "$ENCPASS_KEY_PASS" = "$ENCPASS_CKEY_PASS" ]; then
@@ -566,29 +597,20 @@ case "$1" in
 
 				if [ -d "${ENCPASS_KEY_F%:}" ]; then
 					ENCPASS_KEY_NAME="$(basename "$ENCPASS_KEY_F")"
-					echo "Locking key $ENCPASS_KEY_NAME.."
+					echo "Locking key $ENCPASS_KEY_NAME..."
+					ENCPASS_KEY_VALUE=""
 					if [ -f "$ENCPASS_KEY_F/private.key" ]; then
 						ENCPASS_KEY_VALUE="$(cat "$ENCPASS_KEY_F/private.key")"
 					else
-						echo "Error: No private key file found for $ENCPASS_KEY_NAME. "$ENCPASS_KEY_F/private.key""
+						echo "Error: Private key file ${ENCPASS_KEY_F}private.key missing for bucket $ENCPASS_KEY_NAME."
 					fi
 					if [ ! -z "$ENCPASS_KEY_VALUE" ]; then
 						openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -in "$ENCPASS_KEY_F/private.key" -out "$ENCPASS_KEY_F/private.lock" -k "$ENCPASS_KEY_PASS"
-						ENCPASS_FOUND_KEY=0
-						ENCPASS_FOUND_LOCK=0
-						ENCPASS_KEYS_LIST="$(ls -1p "$ENCPASS_HOME_DIR/keys/*" 2>/dev/null)"
-						for ENCPASS_KEY_FILE_F in $ENCPASS_KEY_FILE_LIST; do
-							if [ -f "$(basename "$ENCPASS_KEY_FILE_F")" = "private.key" ]; then
-								ENCPASS_FOUND_KEY=1
-							fi
-							if [ -f "$(basename "$ENCPASS_KEY_FILE_F")" = "private.lock" ]; then
-								ENCPASS_FOUND_LOCK=1
-							fi
-						done
-						if [ $ENCPASS_FOUND_KEY=1 ] && [ $ENCPASS_FOUND_LOCK=1 ]; then
-							# Found both the key and lock file.  We can remove the key file now
+						if [ -f "$ENCPASS_KEY_F/private.key" ] && [ -f "$ENCPASS_KEY_F/private.lock" ]; then
+							# Both the key and lock file exist.  We can remove the key file now
 							rm -f "$ENCPASS_KEY_F/private.key"
-							ENCPASS_NUM_KEYS_LOCKED=$(( $ENCPASS_NUM_KEYS_LOCKED + 1 ))
+							echo "Locked key $ENCPASS_KEY_NAME."
+							ENCPASS_NUM_KEYS_LOCKED=$(( ENCPASS_NUM_KEYS_LOCKED + 1 ))
 						else
 							echo "Error: The key fle and/or lock file were not found as expected for key $ENCPASS_KEY_NAME."
 						fi
@@ -607,15 +629,14 @@ case "$1" in
 		shift
 		encpass_checks
 
-		echo "\nAbout to unlock keys held in $ENCPASS_HOME_DIR/keys/"
+		printf "%s\n" "About to unlock keys held in the $ENCPASS_HOME_DIR/keys/ directory."
 
-		echo "\nEnter Password to unlock keys:" >&2
+		printf "\nEnter Password to unlock keys: " >&2
 		stty -echo
 		read -r ENCPASS_KEY_PASS
-		stty echo
-		echo "Confirm Password:" >&2
-		stty -echo
+		printf "\nConfirm Password: " >&2
 		read -r ENCPASS_CKEY_PASS
+		printf "\n"
 		stty echo
 
 		if [ "$ENCPASS_KEY_PASS" = "$ENCPASS_CKEY_PASS" ]; then
@@ -625,7 +646,7 @@ case "$1" in
 
 				if [ -d "${ENCPASS_KEY_F%:}" ]; then
 					ENCPASS_KEY_NAME="$(basename "$ENCPASS_KEY_F")"
-					echo "Unlocking key $ENCPASS_KEY_NAME.."
+					echo "Unlocking key $ENCPASS_KEY_NAME..."
 					if [ -f "$ENCPASS_KEY_F/private.key" ]; then
 						echo "Error: Existing private key file found for $ENCPASS_KEY_NAME. Exiting to avoid overwriting."
 						exit 1
@@ -640,33 +661,16 @@ case "$1" in
 							-in "$ENCPASS_KEY_F/private.lock" -out "$ENCPASS_KEY_F/private.key" \
 							-k "$ENCPASS_KEY_PASS" 2>&1 | encpass_save_err "$ENCPASS_KEY_F/failed"
 
-						ENCPASS_FOUND_KEY=0
-						ENCPASS_FOUND_LOCK=0
-						ENCPASS_KEY_FILE_LIST="$(ls -1p "$ENCPASS_KEY_F" 2>/dev/null)"
-						for ENCPASS_KEY_FILE_F in $ENCPASS_KEY_FILE_LIST; do
-							if [ "$ENCPASS_KEY_FILE_F" = "private.key" ]; then
-								ENCPASS_FOUND_KEY=1
-							fi
-							if [ "$ENCPASS_KEY_FILE_F" = "private.lock" ]; then
-								ENCPASS_FOUND_LOCK=1
-							fi
-							if [ "$ENCPASS_KEY_FILE_F" = "failed" ]; then 
-								# Decryption was not successful.  Private key contains garbage remove.
-								echo "Error: decryption was not successful."
-								rm -f "$ENCPASS_KEY_F/private.key"
-								exit 1
-							fi
-						done
-						if [ $ENCPASS_FOUND_KEY=1 ] && [ $ENCPASS_FOUND_LOCK=1 ]; then
-							# Found both the key and lock file.  We can remove the key file now
+						if [ -f "$ENCPASS_KEY_F/private.key" ] && [ -f "$ENCPASS_KEY_F/private.lock" ]; then
+							# Both the key and lock file exist.  We can remove the lock file now.
 							rm -f "$ENCPASS_KEY_F/private.lock"
-							ENCPASS_NUM_KEYS_UNLOCKED=$(( $ENCPASS_NUM_KEYS_UNLOCKED + 1 ))
+							echo "Unlocked key $ENCPASS_KEY_NAME."
+							ENCPASS_NUM_KEYS_UNLOCKED=$(( ENCPASS_NUM_KEYS_UNLOCKED + 1 ))
 						else
 							echo "Error: The key fle and/or lock file were not found as expected for key $ENCPASS_KEY_NAME."
 						fi
 					else
 						echo "Error: No lock file found for the $ENCPASS_KEY_NAME key."
-						exit 1
 					fi
 				fi
 			done
@@ -675,12 +679,17 @@ case "$1" in
 			echo "Error: Passwords do not match."
 		fi
 		;;
+	dir )
+		shift
+		encpass_checks
+		echo "ENCPASS_HOME_DIR = $ENCPASS_HOME_DIR"
+		;;
 	help|--help|usage|--usage|\? )
 		encpass_checks
 		encpass_help
 		;;
 	* )
-		if [ ! -z $1 ]; then
+		if [ ! -z "$1" ]; then
 			echo "Command not recognized. See \"encpass.sh help\" for a list commands."
 			exit 1
 		fi
