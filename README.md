@@ -79,7 +79,15 @@ export ENCPASS_HOME_DIR=/keybase/private/<USERNAME>/.encpass
 ```
 
 ## Testing with Docker
-encpass.sh strives to be usable in all POSIX compliant shell environments (i.e. SH, BASH, ZSH, KSH).  To verify changes to the script have not broken compliance, you can run the bundled unit tests with the repo using make. 
+All testing can be carried out using the Makefile bundled with the repo.  This Makefile will build and run a docker image to carry out the testing; therefore, you must have docker installed on your local machine in order to execute the tests.
+
+To verify that any changes made do not contain any errors, please run shellcheck using make.
+```
+make check
+```
+If there are any errors output please correct those errors or suppress the warnings if appropriate. 
+
+encpass.sh also strives to be usable in all POSIX compliant shell environments (i.e. SH, BASH, ZSH, KSH).  To verify changes to the script have not broken compliance, you can run the bundled unit tests with the repo using make. 
 ```
 make test
 ```

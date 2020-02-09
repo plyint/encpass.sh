@@ -151,12 +151,24 @@ encpass_get_abs_filename() {
 
 encpass_decrypt_secret() {
 	if [ -f "$ENCPASS_PRIVATE_KEY_ABS_NAME" ]; then
-		dd if="$ENCPASS_SECRET_ABS_NAME" ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
-			-d -a -iv "$(head -c 32 "$ENCPASS_SECRET_ABS_NAME")" -K "$(cat "$ENCPASS_PRIVATE_KEY_ABS_NAME")" 2> /dev/null
+		ENCPASS_DECRYPT_RESULT="$(dd if="$ENCPASS_SECRET_ABS_NAME" ibs=1 skip=32 2> /dev/null | openssl enc -aes-256-cbc \
+			-d -a -iv "$(head -c 32 "$ENCPASS_SECRET_ABS_NAME")" -K "$(cat "$ENCPASS_PRIVATE_KEY_ABS_NAME")" 2> /dev/null)"
+		if [ ! -z "$ENCPASS_DECRYPT_RESULT" ]; then
+			echo "$ENCPASS_DECRYPT_RESULT"
+		else
+			# If a failed unlock command occurred and the user tries to show the secret
+			# Present either locked or decrypt command
+			if [ -f "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.lock" ]; then 
+		    echo "**Locked**"
+			else
+				# The locked file wasn't present as expected.  Let's display a failure
+		    echo "Error: Failed to decrypt"
+			fi
+		fi
 	elif [ -f "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.lock" ]; then
 		echo "**Locked**"
 	else
-		echo "Error: Unable to decrypt"
+		echo "Error: Unable to decrypt. The key file \"$ENCPASS_PRIVATE_KEY_ABS_NAME\" is not present."
 	fi
 }
 
@@ -571,14 +583,14 @@ case "$1" in
 		shift
 		encpass_checks
 
-		echo "********************!!!WARNING!!!*********************" >&2
-		echo "You are about to lock your keys with a password." >&2
-		echo "You will not be able to use your secrets again until you" >&2
-		echo "unlock the keys with the same password. It is important " >&2
-		echo "that you securely store the password, so you can recall it" >&2
-		echo "in the future.  If you forget your password you will no" >&2
-		echo "longer be able to access your secrets." >&2
-		echo "********************!!!WARNING!!!*********************" >&2
+		echo "************************!!!WARNING!!!*************************" >&2
+		echo "* You are about to lock your keys with a password.           *" >&2
+		echo "* You will not be able to use your secrets again until you   *" >&2
+		echo "* unlock the keys with the same password. It is important    *" >&2
+		echo "* that you securely store the password, so you can recall it *" >&2
+		echo "* in the future.  If you forget your password you will no    *" >&2
+		echo "* longer be able to access your secrets.                     *" >&2
+		echo "************************!!!WARNING!!!*************************" >&2
 
 		printf "\n%s\n" "About to lock keys held in directory $ENCPASS_HOME_DIR/keys/"
 
@@ -597,12 +609,20 @@ case "$1" in
 
 				if [ -d "${ENCPASS_KEY_F%:}" ]; then
 					ENCPASS_KEY_NAME="$(basename "$ENCPASS_KEY_F")"
-					echo "Locking key $ENCPASS_KEY_NAME..."
 					ENCPASS_KEY_VALUE=""
 					if [ -f "$ENCPASS_KEY_F/private.key" ]; then
 						ENCPASS_KEY_VALUE="$(cat "$ENCPASS_KEY_F/private.key")"
+						if [ ! -f "$ENCPASS_KEY_F/private.lock" ]; then
+					    echo "Locking key $ENCPASS_KEY_NAME..."
+						else
+						  echo "Error: The key $ENCPASS_KEY_NAME appears to have been previously locked."
+							echo "       The current key file may hold a bad value. Exiting to avoid encrypting"
+							echo "       a bad value and overwriting the lock file."
+							exit 1
+						fi
 					else
 						echo "Error: Private key file ${ENCPASS_KEY_F}private.key missing for bucket $ENCPASS_KEY_NAME."
+						exit 1
 					fi
 					if [ ! -z "$ENCPASS_KEY_VALUE" ]; then
 						openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -in "$ENCPASS_KEY_F/private.key" -out "$ENCPASS_KEY_F/private.lock" -k "$ENCPASS_KEY_PASS"
@@ -634,12 +654,10 @@ case "$1" in
 		printf "\nEnter Password to unlock keys: " >&2
 		stty -echo
 		read -r ENCPASS_KEY_PASS
-		printf "\nConfirm Password: " >&2
-		read -r ENCPASS_CKEY_PASS
 		printf "\n"
 		stty echo
 
-		if [ "$ENCPASS_KEY_PASS" = "$ENCPASS_CKEY_PASS" ]; then
+		if [ ! -z "$ENCPASS_KEY_PASS" ]; then
 			ENCPASS_NUM_KEYS_UNLOCKED=0
 			ENCPASS_KEYS_LIST="$(ls -1d "$ENCPASS_HOME_DIR/keys/"*"/" 2>/dev/null)"
 			for ENCPASS_KEY_F in $ENCPASS_KEYS_LIST; do
@@ -647,8 +665,8 @@ case "$1" in
 				if [ -d "${ENCPASS_KEY_F%:}" ]; then
 					ENCPASS_KEY_NAME="$(basename "$ENCPASS_KEY_F")"
 					echo "Unlocking key $ENCPASS_KEY_NAME..."
-					if [ -f "$ENCPASS_KEY_F/private.key" ]; then
-						echo "Error: Existing private key file found for $ENCPASS_KEY_NAME. Exiting to avoid overwriting."
+					if [ -f "$ENCPASS_KEY_F/private.key" ] && [ ! -f "$ENCPASS_KEY_F/private.lock" ]; then
+						echo "Error: Key $ENCPASS_KEY_NAME appears to be unlocked already."
 						exit 1
 					fi
 
@@ -661,13 +679,19 @@ case "$1" in
 							-in "$ENCPASS_KEY_F/private.lock" -out "$ENCPASS_KEY_F/private.key" \
 							-k "$ENCPASS_KEY_PASS" 2>&1 | encpass_save_err "$ENCPASS_KEY_F/failed"
 
-						if [ -f "$ENCPASS_KEY_F/private.key" ] && [ -f "$ENCPASS_KEY_F/private.lock" ]; then
-							# Both the key and lock file exist.  We can remove the lock file now.
-							rm -f "$ENCPASS_KEY_F/private.lock"
-							echo "Unlocked key $ENCPASS_KEY_NAME."
-							ENCPASS_NUM_KEYS_UNLOCKED=$(( ENCPASS_NUM_KEYS_UNLOCKED + 1 ))
+						if [ ! -f "$ENCPASS_KEY_F/failed" ]; then
+							# No failure has occurred.
+						  if [ -f "$ENCPASS_KEY_F/private.key" ] && [ -f "$ENCPASS_KEY_F/private.lock" ]; then
+							  # Both the key and lock file exist.  We can remove the lock file now.
+							  rm -f "$ENCPASS_KEY_F/private.lock"
+							  echo "Unlocked key $ENCPASS_KEY_NAME."
+							  ENCPASS_NUM_KEYS_UNLOCKED=$(( ENCPASS_NUM_KEYS_UNLOCKED + 1 ))
+						  else
+							  echo "Error: The key file and/or lock file were not found as expected for key $ENCPASS_KEY_NAME."
+						  fi
 						else
-							echo "Error: The key fle and/or lock file were not found as expected for key $ENCPASS_KEY_NAME."
+						  printf "Error: Failed to unlock key %s.\n" "$ENCPASS_KEY_NAME"
+							printf "       Please view %sfailed for details.\n" "$ENCPASS_KEY_F"
 						fi
 					else
 						echo "Error: No lock file found for the $ENCPASS_KEY_NAME key."
@@ -676,13 +700,13 @@ case "$1" in
 			done
 			echo "Unlocked $ENCPASS_NUM_KEYS_UNLOCKED keys."
 		else
-			echo "Error: Passwords do not match."
+			echo "No password entered."
 		fi
 		;;
 	dir )
 		shift
 		encpass_checks
-		echo "ENCPASS_HOME_DIR = $ENCPASS_HOME_DIR"
+		echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
 		;;
 	help|--help|usage|--usage|\? )
 		encpass_checks
