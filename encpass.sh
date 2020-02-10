@@ -602,6 +602,11 @@ case "$1" in
 		printf "\n"
 		stty echo
 
+		if [ -z "$ENCPASS_KEY_PASS" ]; then
+			echo "Error: You must supply a password value."
+			exit 1
+		fi
+
 		if [ "$ENCPASS_KEY_PASS" = "$ENCPASS_CKEY_PASS" ]; then
 			ENCPASS_NUM_KEYS_LOCKED=0
 			ENCPASS_KEYS_LIST="$(ls -1d "$ENCPASS_HOME_DIR/keys/"*"/" 2>/dev/null)"
