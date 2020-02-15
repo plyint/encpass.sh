@@ -713,6 +713,44 @@ case "$1" in
 		encpass_checks
 		echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
 		;;
+	rekey )
+		shift
+		encpass_checks
+		if [ -z "$1" ]; then
+			echo "Error: You must specify a bucket to rekey."
+			exit 1
+		else
+			if [ ! -d "$ENCPASS_HOME_DIR/keys/$1" ]; then
+				echo "Error: Bucket $1 does not exist"
+				exit 1
+			fi
+
+			# Generate a new key
+			ENCPASS_BUCKET="$1_NEW"
+			encpass_generate_private_key
+
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			ENCPASS_BUCKET_LIST="$(ls -1p "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
+			for ENCPASS_C in $ENCPASS_BUCKET_LIST; do
+				# Set each of the existing secrets for the new key
+				if [ ! -d "${ENCPASS_C%:}" ]; then
+					ENCPASS_SECRET_NAME=$(basename "$ENCPASS_C" .enc)
+					ENCPASS_BUCKET="$1"
+					ENCPASS_SECRET_INPUT=$(get_secret "$1" "$ENCPASS_SECRET_NAME")
+					ENCPASS_CSECRET_INPUT="$ENCPASS_SECRET_INPUT"
+					ENCPASS_BUCKET="$1_NEW"
+					set_secret "$ENCPASS_BUCKET" "$ENCPASS_SECRET_NAME" "reuse"
+				fi
+			done
+
+			# Replace existing key and secrets with new versions
+			mv -f "$ENCPASS_HOME_DIR/keys/$1_NEW/"* "$ENCPASS_HOME_DIR/keys/$1"
+			mv -f "$ENCPASS_HOME_DIR/secrets/$1_NEW/"* "$ENCPASS_HOME_DIR/secrets/$1"
+			rmdir "$ENCPASS_HOME_DIR/keys/$1_NEW"
+			rmdir "$ENCPASS_HOME_DIR/secrets/$1_NEW"
+		fi
+		;;
 	help|--help|usage|--usage|\? )
 		encpass_checks
 		encpass_help
