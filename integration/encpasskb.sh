@@ -123,8 +123,16 @@ case "$1" in
 		shift
 		encpass_checks
 
-		printf "These secrets/keys need to be committed to Keybase...\n\n"
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep * && pwd && echo ''" \; | sed -e s/"\."git//g
+		echo "SECRETS/KEYS THAT NEED TO BE COMMITTED..."
+		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && pwd && echo ''" \; | sed -e s/"\."git//g
+		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo ""
+		echo ""
+		echo "SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE..."
+		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && pwd && echo ''" \; | sed -e s/"\."git//g
+		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 		;;
 	help|--help|usage|--usage|? )
 		shift
@@ -151,17 +159,18 @@ COMMANDS:
         respectively.
 
     list
-        Lists all the sets of encpass.sh Keybase repos that can be cloned.  It assumes that only
-        any Keybase repo that ends in ".keys" belongs to encpass.sh.
+        Lists all the sets of encpass.sh Keybase repos that can be cloned.  It assumes that any 
+        Keybase repos that end in ".keys" belong to encpass.sh.
 
     status
         Lists all the local changes to encpass.sh keys and secrets that need to be committed
-        and pushed to the remote Keybase git repos.  It will output the directories beneath
-        each set of "git status" changes that needs to be committed and pushed.  The user
-        can then quickly copy this directory name and change to the directory.  Once, in the
-        directory the user should use git as usual to stage, commit and push all changes.
-        Once, all changes have been pushed it is recommended to rerun "encpasskb.sh status"
-        to verify all pending changes have been addressed.
+        and pushed to the remote Keybase git repos.  It will output the directory where 
+        each set of "git status" changes are located that need to be committed and pushed.  
+
+				The user can copy this directory name and then change to the directory.  Once, in the
+        directory the user should use git as usual to stage, commit and push all changes to
+				Keybase.  Once, all changes have been pushed it is recommended to run "encpasskb.sh status"
+        again to verify all local changes have been committed and pushed.
 
     help|--help|usage|--usage|?
         Display this help message
