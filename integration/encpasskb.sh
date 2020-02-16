@@ -107,8 +107,8 @@ case "$1" in
 		shift
 		encpass_checks
 
-		printf "%-31s %-24s %-24s\n" "OWNER" "REPO" "CLONE"
-		printf "%-31s %-24s %-24s\n" "+++++" "++++" "+++++"
+		printf "%-31s %-24s %-24s\n" "OWNER" "REPO" "CLONE COMMAND"
+		printf "%-31s %-24s %-24s\n" "+++++" "++++" "+++++++++++++"
 
 		# Real ugly, but seems to work...
 		# Get all the Keybase git repos the user has access to, then
