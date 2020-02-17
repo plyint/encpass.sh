@@ -107,32 +107,32 @@ case "$1" in
 		shift
 		encpass_checks
 
-		printf "%-31s %-24s %-24s\n" "OWNER" "REPO" "CLONE COMMAND"
-		printf "%-31s %-24s %-24s\n" "+++++" "++++" "+++++++++++++"
-
 		# Real ugly, but seems to work...
 		# Get all the Keybase git repos the user has access to, then
 		# filter by ".keys" ending (assumption only encpass created repos have this ending)
 		# and then output the team/personal, repo name, and clone command for each repo
-		keybase git list | grep .keys | grep private | sed 's/\//./g' | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\./); printf "%-31s %-24s %s %s %s \n", whoami, a[1], script" clone", whoami, a[1]; }'
+		ENCPASS_KEYBASE_LIST="$(keybase git list | grep .keys)"
+		printf "%-31s %-24s %-24s\n" "OWNER" "REPO" "CLONE COMMAND"
+		printf "%-31s %-24s %-24s\n" "+++++" "++++" "+++++++++++++"
+		echo "$ENCPASS_KEYBASE_LIST" | grep private | sed 's/\//./g' | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\./); printf "%-31s %-24s %s %s %s \n", whoami, a[1], script" clone", whoami, a[1]; }'
 
-		keybase git list | grep .keys | grep -v private | sed 's/\//./g' | awk -v script="$0" '{split($1,a,/\./); if (a[3] != "keys") printf "%s.%-24s %-24s %-16s %s.%s %s \n", a[1], a[2], a[3], script" clone", a[1], a[2], a[3]; else printf "%-31s %-24s %-16s %s %s \n", a[1], a[2], script" clone", a[1], a[2]; }'
+		echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//./g' | awk -v script="$0" '{split($1,a,/\./); if (a[3] != "keys") printf "%s.%-24s %-24s %-16s %s.%s %s \n", a[1], a[2], a[3], script" clone", a[1], a[2], a[3]; else printf "%-31s %-24s %-16s %s %s \n", a[1], a[2], script" clone", a[1], a[2]; }'
 
 		;;
 	status )
 		shift
 		encpass_checks
 
-		echo "SECRETS/KEYS THAT NEED TO BE COMMITTED..."
-		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo "         SECRETS/KEYS THAT NEED TO BE COMMITTED          "
+		echo "========================================================="
 		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && pwd && echo ''" \; | sed -e s/"\."git//g
-		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo "========================================================="
 		echo ""
 		echo ""
-		echo "SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE..."
-		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo "     SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE      "
+		echo "========================================================="
 		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && pwd && echo ''" \; | sed -e s/"\."git//g
-		echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		echo "========================================================="
 		;;
 	help|--help|usage|--usage|? )
 		shift
