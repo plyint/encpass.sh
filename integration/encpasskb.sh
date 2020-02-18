@@ -119,6 +119,14 @@ case "$1" in
 		echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//./g' | awk -v script="$0" '{split($1,a,/\./); if (a[3] != "keys") printf "%s.%-24s %-24s %-16s %s.%s %s \n", a[1], a[2], a[3], script" clone", a[1], a[2], a[3]; else printf "%-31s %-24s %-16s %s %s \n", a[1], a[2], script" clone", a[1], a[2]; }'
 
 		;;
+	refresh )
+		shift
+		encpass_checks
+
+		echo "Refreshing all secrets/keys for $ENCPASS_HOME_DIR..."
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git pull --rebase && pwd && echo ''" \; | sed -e s/"\."git//g
+		echo "Refresh Complete."
+		;;
 	status )
 		shift
 		encpass_checks
@@ -162,14 +170,22 @@ COMMANDS:
         Lists all the sets of encpass.sh Keybase repos that can be cloned.  It assumes that any 
         Keybase repos that end in ".keys" belong to encpass.sh.
 
+    refresh
+        Runs a "git pull --rebase" for all encpass.sh keys and secrets for the ENCPASS_HOME_DIR
+        that is currently set.  It is possible if the keys/secrets held on the remote Keybase
+        repos have been updated, WHILE you were making updates on your local that there could
+        be conflicts that result.  In that case you will need to use git as you normally would to
+        stash your changes and then run a refresh and then unstash your changes and resolve the
+        conflicts.
+				
     status
         Lists all the local changes to encpass.sh keys and secrets that need to be committed
         and pushed to the remote Keybase git repos.  It will output the directory where 
         each set of "git status" changes are located that need to be committed and pushed.  
 
-				The user can copy this directory name and then change to the directory.  Once, in the
+        The user can copy this directory name and then change to the directory.  Once, in the
         directory the user should use git as usual to stage, commit and push all changes to
-				Keybase.  Once, all changes have been pushed it is recommended to run "encpasskb.sh status"
+        Keybase.  Once, all changes have been pushed it is recommended to run "encpasskb.sh status"
         again to verify all local changes have been committed and pushed.
 
     help|--help|usage|--usage|?
