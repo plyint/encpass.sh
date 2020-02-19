@@ -52,15 +52,9 @@ case "$1" in
 		fi
 
     encpass_keybase_repo_type "$1"
-
 		echo "Cloning repo $1.$2..."
-		if [ "$ENCPASS_KEYBASE_REPO_TYPE" = "team" ]; then
-			git clone "keybase://team/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" > /dev/null
-			git clone "keybase://team/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" > /dev/null
-		else
-			git clone "keybase://private/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" > /dev/null
-			git clone "keybase://private/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" > /dev/null
-		fi
+		git clone "keybase://$ENCPASS_KEYBASE_REPO_TYPE/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" > /dev/null
+		git clone "keybase://$ENCPASS_KEYBASE_REPO_TYPE/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" > /dev/null
 		echo "Cloning complete."
 
 		cd "$ENCPASS_HOME_DIR/keys/$1.$2" || return
@@ -164,16 +158,25 @@ case "$1" in
 
 		echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
 		echo ""
-		echo "         SECRETS/KEYS THAT NEED TO BE COMMITTED          "
-		echo "========================================================="
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g
-		echo "========================================================="
-		echo ""
-		echo ""
-		echo "     SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE      "
-		echo "========================================================="
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g
-		echo "========================================================="
+		COMMITFILES=$(find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g)
+		if [ ! -z "$COMMITFILES" ];then
+			echo "         SECRETS/KEYS THAT NEED TO BE COMMITTED          "
+			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+			echo "$COMMITFILES"
+			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+			echo ""
+			echo ""
+		fi
+		PUSHFILES=$(find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g)
+		if [ ! -z "$PUSHFILES" ];then
+			echo "     SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE      "
+			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+			echo "$PUSHFILES"
+			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+		fi
+		if [ -z "$COMMITFILES" ] && [ -z "$PUSHFILES" ]; then
+			echo "No files need to be committed or pushed to Keybase."
+		fi
 		;;
 	store )
 		shift
