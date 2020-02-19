@@ -43,20 +43,45 @@ case "$1" in
 
 		if [ -z "$1" ]; then
 			echo "Error: You must specify a Keybase team."
+			exit 1
 		fi
 
 		if [ -z "$2" ]; then
-			echo "Error: You must specify a base name for Keybase git repository."
+			echo "Error: You must specify a name for the Keybase git repository."
+			exit 1
 		fi
 
     encpass_keybase_repo_type "$1"
 
+		echo "Cloning repo $1.$2..."
 		if [ "$ENCPASS_KEYBASE_REPO_TYPE" = "team" ]; then
-			git clone "keybase://team/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2"
-			git clone "keybase://team/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2"
+			git clone "keybase://team/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" > /dev/null
+			git clone "keybase://team/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" > /dev/null
 		else
-			git clone "keybase://private/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2"
-			git clone "keybase://private/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2"
+			git clone "keybase://private/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" > /dev/null
+			git clone "keybase://private/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" > /dev/null
+		fi
+		echo "Cloning complete."
+
+		cd "$ENCPASS_HOME_DIR/keys/$1.$2" || return
+		KEY_FILES="$(git branch -r)"
+		echo "$KEY_FILES"
+
+		if [ -z "$KEY_FILES" ]; then
+			echo "$1.$2 keys repo is empty. Initializing..."
+			touch .gitignore
+			git add . && git commit -q -m "Initializing $1.$2 keys repo." && git push -q > /dev/null
+			echo "$1.$2 repo initialized."
+		fi
+
+		cd "$ENCPASS_HOME_DIR/secrets/$1.$2" || return
+		SECRET_FILES="$(git branch -r)"
+
+		if [ -z "$SECRET_FILES" ]; then
+			echo "$1.$2 secrets repo is empty. Initializing..."
+			touch .gitignore
+			git add . && git commit -q -m "Initializing $1.$2 secrets repo." && git push -q > /dev/null
+			echo "$1.$2 secrets repo initialized."
 		fi
 		;;
 	create )
@@ -65,21 +90,25 @@ case "$1" in
 
 		if [ -z "$1" ]; then
 			echo "Error: You must specify a Keybase team."
+			exit 1
 		fi
 
 		if [ -z "$2" ]; then
-			echo "Error: You must specify a base name for Keybase git repository."
+			echo "Error: You must specify a name for the Keybase git repository."
+			exit 1
 		fi
 
     encpass_keybase_repo_type "$1"
 
+		echo "Creating $1.$2 repo..."
 		if [ "$ENCPASS_KEYBASE_REPO_TYPE" = "team" ]; then
-			keybase git create --team="$1" "$2.keys"
-			keybase git create --team="$1" "$2.secrets"
+			keybase git create --team="$1" "$2.keys" > /dev/null
+			keybase git create --team="$1" "$2.secrets" > /dev/null
 		else
-			keybase git create "$2.keys"
-			keybase git create "$2.secrets"
+			keybase git create "$2.keys" > /dev/null
+			keybase git create "$2.secrets" > /dev/null
 		fi
+		echo "$1.$2 repo created."
 		;;
 	delete )
 		shift
@@ -87,10 +116,12 @@ case "$1" in
 
 		if [ -z "$1" ]; then
 			echo "Error: You must specify a Keybase team or your Keybase username."
+			exit 1
 		fi
 
 		if [ -z "$2" ]; then
-			echo "Error: You must specify a base name for Keybase git repository."
+			echo "Error: You must specify a name for the Keybase git repository."
+			exit 1
 		fi
 
     encpass_keybase_repo_type "$1"
@@ -131,16 +162,53 @@ case "$1" in
 		shift
 		encpass_checks
 
+		echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
+		echo ""
 		echo "         SECRETS/KEYS THAT NEED TO BE COMMITTED          "
 		echo "========================================================="
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && pwd && echo ''" \; | sed -e s/"\."git//g
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g
 		echo "========================================================="
 		echo ""
 		echo ""
 		echo "     SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE      "
 		echo "========================================================="
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && pwd && echo ''" \; | sed -e s/"\."git//g
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g
 		echo "========================================================="
+		;;
+	store )
+		shift
+		encpass_checks
+
+		if [ -z "$1" ]; then
+			echo "Error: You must specify a Keybase team."
+			exit 1
+		fi
+
+		if [ -z "$2" ]; then
+			echo "Error: You must specify a name for the Keybase git repository."
+			exit 1
+		fi
+
+		cd "$ENCPASS_HOME_DIR/keys/$1.$2" || return
+		KEY_FILES="$(git status -s | grep .)"
+
+		if [ ! -z "$KEY_FILES" ]; then
+			CHANGES_FOR_KEY_FILES="$(echo "$KEY_FILES" | sed -e s/.enc//g | awk '{if ($1=="D") printf "removed:";if ($1=="A"||$1=="??") printf "added:";if ($1=="M") printf "modified:";if ($1=="R") printf "renamed:";printf $2" ";}')"
+			echo "Committing and pushing key changes for $1.$2..."
+			git add . && git commit -q -m "$(keybase whoami) ${CHANGES_FOR_KEY_FILES}for $1.$2 keys." && git push -q
+			echo "$1.$2 key changes pushed." 
+		fi
+
+		cd "$ENCPASS_HOME_DIR/secrets/$1.$2" || return
+		SECRET_FILES="$(git status -s | grep .)"
+
+		if [ ! -z "$SECRET_FILES" ]; then
+			CHANGES_FOR_SECRET_FILES="$(echo "$SECRET_FILES" | sed -e s/.enc//g | awk '{if ($1=="D") printf "removed:";if ($1=="A"||$1=="??") printf "added:";if ($1=="M") printf "modified:";if ($1=="R") printf "renamed:";printf $2" ";}')"
+			echo "Committing and pushing secret changes for $1.$2..."
+			git add . && git commit -q -m "$(keybase whoami) ${CHANGES_FOR_SECRET_FILES}for $1.$2 secrets." && git push -q
+			echo "$1.$2 secrets changes pushed." 
+		fi
+
 		;;
 	help|--help|usage|--usage|? )
 		shift
@@ -180,13 +248,11 @@ COMMANDS:
 				
     status
         Lists all the local changes to encpass.sh keys and secrets that need to be committed
-        and pushed to the remote Keybase git repos.  It will output the directory where 
-        each set of "git status" changes are located that need to be committed and pushed.  
+        and pushed to the remote Keybase git repos.  It will output the "git status" of 
+        each bucket where the changes are located that need to be committed and pushed.  
 
-        The user can copy this directory name and then change to the directory.  Once, in the
-        directory the user should use git as usual to stage, commit and push all changes to
-        Keybase.  Once, all changes have been pushed it is recommended to run "encpasskb.sh status"
-        again to verify all local changes have been committed and pushed.
+        The user can perform a "encpass.kb store <owner> <repo>" command to committ and push
+        the changes to Keybase.
 
     help|--help|usage|--usage|?
         Display this help message
