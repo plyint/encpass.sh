@@ -257,6 +257,9 @@ COMMANDS:
         The user can perform a "encpass.kb store <owner> <repo>" command to committ and push
         the changes to Keybase.
 
+    store <team/user> <repository name>
+        Commits and pushes all pending changes for the specified team/user and repo to Keybase.
+
     help|--help|usage|--usage|?
         Display this help message
 EOF
