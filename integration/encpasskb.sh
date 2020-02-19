@@ -53,8 +53,8 @@ case "$1" in
 
     encpass_keybase_repo_type "$1"
 		echo "Cloning repo $1.$2..."
-		git clone "keybase://$ENCPASS_KEYBASE_REPO_TYPE/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" > /dev/null
-		git clone "keybase://$ENCPASS_KEYBASE_REPO_TYPE/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" > /dev/null
+		git clone "keybase://$ENCPASS_KEYBASE_REPO_TYPE/$1/$2.keys" "$ENCPASS_HOME_DIR/keys/$1.$2" 2>/dev/null
+		git clone "keybase://$ENCPASS_KEYBASE_REPO_TYPE/$1/$2.secrets" "$ENCPASS_HOME_DIR/secrets/$1.$2" 2>/dev/null
 		echo "Cloning complete."
 
 		cd "$ENCPASS_HOME_DIR/keys/$1.$2" || return
@@ -64,7 +64,7 @@ case "$1" in
 		if [ -z "$KEY_FILES" ]; then
 			echo "$1.$2 keys repo is empty. Initializing..."
 			touch .gitignore
-			git add . && git commit -q -m "Initializing $1.$2 keys repo." && git push -q > /dev/null
+			git add . && git commit -q -m "Initializing $1.$2 keys repo." && git push -q 2>/dev/null
 			echo "$1.$2 repo initialized."
 		fi
 
@@ -74,7 +74,7 @@ case "$1" in
 		if [ -z "$SECRET_FILES" ]; then
 			echo "$1.$2 secrets repo is empty. Initializing..."
 			touch .gitignore
-			git add . && git commit -q -m "Initializing $1.$2 secrets repo." && git push -q > /dev/null
+			git add . && git commit -q -m "Initializing $1.$2 secrets repo." && git push -q 2>/dev/null
 			echo "$1.$2 secrets repo initialized."
 		fi
 		;;
@@ -96,11 +96,11 @@ case "$1" in
 
 		echo "Creating $1.$2 repo..."
 		if [ "$ENCPASS_KEYBASE_REPO_TYPE" = "team" ]; then
-			keybase git create --team="$1" "$2.keys" > /dev/null
-			keybase git create --team="$1" "$2.secrets" > /dev/null
+			keybase git create --team="$1" "$2.keys" > /dev/null 2>&1
+			keybase git create --team="$1" "$2.secrets" > /dev/null 2>&1
 		else
-			keybase git create "$2.keys" > /dev/null
-			keybase git create "$2.secrets" > /dev/null
+			keybase git create "$2.keys" > /dev/null 2>&1
+			keybase git create "$2.secrets" > /dev/null 2>&1
 		fi
 		echo "$1.$2 repo created."
 		;;
@@ -149,7 +149,7 @@ case "$1" in
 		encpass_checks
 
 		echo "Refreshing all secrets/keys for $ENCPASS_HOME_DIR..."
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git pull --rebase && pwd && echo ''" \; | sed -e s/"\."git//g
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git pull -q --rebase 2>/dev/null && printf '%s %s' \$(dirname \$(pwd) | sed -e 's/\/.*\///g') \$(basename \$(pwd)) && echo ''" \; | sed -e s/"\."git//g
 		echo "Refresh Complete."
 		;;
 	status )
@@ -198,7 +198,7 @@ case "$1" in
 		if [ ! -z "$KEY_FILES" ]; then
 			CHANGES_FOR_KEY_FILES="$(echo "$KEY_FILES" | sed -e s/.enc//g | awk '{if ($1=="D") printf "removed:";if ($1=="A"||$1=="??") printf "added:";if ($1=="M") printf "modified:";if ($1=="R") printf "renamed:";printf $2" ";}')"
 			echo "Committing and pushing key changes for $1.$2..."
-			git add . && git commit -q -m "$(keybase whoami) ${CHANGES_FOR_KEY_FILES}for $1.$2 keys." && git push -q
+			git add . && git commit -q -m "$(keybase whoami) ${CHANGES_FOR_KEY_FILES}for $1.$2 keys." && git push -q 2>/dev/null
 			echo "$1.$2 key changes pushed." 
 		fi
 
@@ -208,7 +208,7 @@ case "$1" in
 		if [ ! -z "$SECRET_FILES" ]; then
 			CHANGES_FOR_SECRET_FILES="$(echo "$SECRET_FILES" | sed -e s/.enc//g | awk '{if ($1=="D") printf "removed:";if ($1=="A"||$1=="??") printf "added:";if ($1=="M") printf "modified:";if ($1=="R") printf "renamed:";printf $2" ";}')"
 			echo "Committing and pushing secret changes for $1.$2..."
-			git add . && git commit -q -m "$(keybase whoami) ${CHANGES_FOR_SECRET_FILES}for $1.$2 secrets." && git push -q
+			git add . && git commit -q -m "$(keybase whoami) ${CHANGES_FOR_SECRET_FILES}for $1.$2 secrets." && git push -q 2>/dev/null
 			echo "$1.$2 secrets changes pushed." 
 		fi
 
