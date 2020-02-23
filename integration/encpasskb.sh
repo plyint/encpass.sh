@@ -149,26 +149,25 @@ case "$1" in
 		encpass_checks
 
 		echo "Refreshing all secrets/keys for $ENCPASS_HOME_DIR..."
-		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git pull -q --rebase 2>/dev/null && printf '%s %s' \$(dirname \$(pwd) | sed -e 's/\/.*\///g') \$(basename \$(pwd)) && echo ''" \; | sed -e s/"\."git//g
+		find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git pull -q --rebase 2>/dev/null && printf 'refreshed %s for %s' \$(dirname \$(pwd) | sed -e 's/\/.*\///g') \$(basename \$(pwd)) && echo ''" \; | sed -e s/"\."git//g
 		echo "Refresh Complete."
 		;;
 	status )
 		shift
 		encpass_checks
 
-		echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
-		echo ""
-		COMMITFILES=$(find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g)
+		COMMITFILES=$(find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git status -s | grep . && pwd && echo ''" \; | sed -e s/"\."git//g)
 		if [ ! -z "$COMMITFILES" ];then
+			echo ""
 			echo "         SECRETS/KEYS THAT NEED TO BE COMMITTED          "
 			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo "$COMMITFILES"
 			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo ""
-			echo ""
 		fi
-		PUSHFILES=$(find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && basename \$(pwd) && echo ''" \; | sed -e s/"\."git//g)
+		PUSHFILES=$(find "$ENCPASS_HOME_DIR" -name .git -execdir sh -c "git diff --name-only @{upstream} @ | grep . && pwd && echo ''" \; | sed -e s/"\."git//g)
 		if [ ! -z "$PUSHFILES" ];then
+			echo ""
 			echo "     SECRETS/KEYS THAT NEED TO BE PUSHED TO KEYBASE      "
 			echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 			echo "$PUSHFILES"
