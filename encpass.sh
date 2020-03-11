@@ -54,7 +54,9 @@ encpass_include_init() {
 		ENCPASS_BUCKET=$1
 		ENCPASS_SECRET_NAME=$2
 	elif [ -n "$1" ]; then
-		ENCPASS_BUCKET=$(basename "$0")
+		if [ -z "$ENCPASS_BUCKET" ]; then
+		  ENCPASS_BUCKET=$(basename "$0")
+		fi
 		ENCPASS_SECRET_NAME=$1
 	else
 		ENCPASS_BUCKET=$(basename "$0")
@@ -157,7 +159,7 @@ encpass_decrypt_secret() {
 			echo "$ENCPASS_DECRYPT_RESULT"
 		else
 			# If a failed unlock command occurred and the user tries to show the secret
-			# Present either locked or decrypt command
+			# Present either a locked or failed decrypt error.
 			if [ -f "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.lock" ]; then 
 		    echo "**Locked**"
 			else
@@ -256,121 +258,111 @@ encpass_save_err() {
 }
 
 encpass_help() {
-less << EOF
-NAME:
-    encpass.sh - Use encrypted passwords in shell scripts
+man -l - << EOF
+.\" Manpage for encpass.sh.
+.\" Email contact@plyint.com to correct errors or typos.
+.TH man 8 "06 March 2020" "1.0" "encpass.sh man page"
+.SH NAME
+encpass.sh \- Use encrypted passwords in shell scripts
+.SH SYNOPSIS
+Include in shell scripts and call the \fBget_secret\fR function:
 
-DESCRIPTION: 
-    A lightweight solution for using encrypted passwords in shell scripts 
-    using OpenSSL. It allows a user to encrypt a password (or any other secret)
-    at runtime and then use it, decrypted, within a script. This prevents
-    shoulder surfing passwords and avoids storing the password in plain text, 
-    within a script, which could inadvertently be sent to or discovered by an 
-    individual at a later date.
+   #!/bin/sh
+   \fB. encpass.sh
+   password=\$(get_secret)\fR
 
-    This script generates an AES 256 bit symmetric key for each script 
-    (or user-defined bucket) that stores secrets. This key will then be used 
-    to encrypt all secrets for that script or bucket.
+Or invoke/manage from the command line:
 
-    Subsequent calls to retrieve a secret will not prompt for a secret to be 
-    entered as the file with the encrypted value already exists.
+   \fBencpass.sh\fR [ COMMAND ] [ OPTIONS ]... [ ARGS ]...
+.SH DESCRIPTION
+A lightweight solution for using encrypted passwords in shell scripts using OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within a script. This prevents shoulder surfing passwords and avoids storing the password in plain text, within a script, which could inadvertently be sent to or discovered by an individual at a later date.
 
-    Note: By default, encpass.sh sets up a directory (.encpass) under the 
-    user's home directory where keys and secrets will be stored.  This directory
-    can be overridden by setting the environment variable ENCPASS_HOME_DIR to a
-    directory of your choice.
+This script generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.
 
-    ~/.encpass (or the directory specified by ENCPASS_HOME_DIR) will contain 
-    the following subdirectories:
-      - keys (Holds the private key for each script/bucket)
-      - secrets (Holds the secrets stored for each script/bucket)
+Subsequent calls to retrieve a secret will not prompt for a secret to be entered as the file with the encrypted value already exists.  
 
-USAGE:
-    To use the encpass.sh script in an existing shell script, source the script 
-    and then call the get_secret function.
+Note: By default, encpass.sh sets up a directory (.encpass) under the user's home directory where keys and secrets will be stored.  This directory can be overridden by setting the environment variable ENCPASS_HOME_DIR to a directory of your choice.  
 
-    Example:
+~/.encpass (or the directory specified by ENCPASS_HOME_DIR) will contain the following subdirectories:
 
-        #!/bin/sh
-        . encpass.sh
-        password=\$(get_secret)
+   - keys (Holds the private key for each script/bucket)
+   - secrets (Holds the secrets stored for each script/bucket)
 
-    When no arguments are passed to the get_secret function,
-    then the bucket name is set to the name of the script and
-    the secret name is set to "password".
-		
-    There are 2 other ways to call get_secret:
+.SH SHELL SCRIPT USAGE
+To use the encpass.sh script within a shell script, source the script and then call the get_secret function.
 
-      Specify the secret name:
-      Ex: \$(get_secret user)
-        - bucket name = <script name>
-        - secret name = "user"
+   #!/bin/sh
+   \fB. encpass.sh
+   password=\$(get_secret)\fR
 
-      Specify both the secret name and bucket name:
-      Ex: \$(get_secret personal user)
-        - bucket name = "personal"
-        - secret name = "user"
+Note: When no arguments are passed to the get_secret function, then the bucket name is set to the name of the script and the secret name is set to "password".  
+   - bucket name = <script name>
+   - secret name = "password"
 
-    encpass.sh also provides a command line interface to manage the secrets.
-    To invoke a command, pass it as an argument to encpass.sh from the shell.
+There are 2 additional ways to call the get_secret function: 
 
-        $ encpass.sh [COMMAND]
+Specify a secret name:
 
-    See the COMMANDS section below for a list of available commands.  Wildcard
-    handling is implemented for secret and bucket names.  This enables
-    performing operations like adding/removing a secret to/from multiple buckets
-		at once.
+   \fBpassword=\$(get_secret user)\fR
+   - bucket name = <script name>
+   - secret name = "user"
 
-COMMANDS:
-    add [-f] <bucket> <secret>
-        Add a secret to the specified bucket.  The bucket will be created
-        if it does not already exist. If a secret with the same name already
-        exists for the specified bucket, then the user will be prompted to
-        confirm overwriting the value.  If the -f option is passed, then the
-        add operation will perform a forceful overwrite of the value. (i.e. no
-        prompt)
+Specify both a secret name and a bucket name:
 
-    list|ls [<bucket>]
-        Display the names of the secrets held in the bucket.  If no bucket
-        is specified, then the names of all existing buckets will be
-        displayed.
+   \fBpassword=\$(get_secret personal user)\fR
+   - bucket name = "personal"
+   - secret name = "user"
 
-    lock
-        Locks all keys used by encpass.sh using a password.  The user
-        will be prompted to enter a password and confirm it.  A user
-        should take care to securely store the password.  If the password
-        is lost then keys can not be unlocked.  When keys are locked,
-        secrets can not be retrieved. (e.g. the output of the values
-        in the "show" command will be encrypted/garbage)
+.SH COMMANDS
 
-    remove|rm [-f] <bucket> [<secret>]
-        Remove a secret from the specified bucket.  If only a bucket is
-        specified then the entire bucket (i.e. all secrets and keys) will
-        be removed.  By default the user is asked to confirm the removal of
-        the secret or the bucket.  If the -f option is passed then a 
-        forceful removal will be performed.  (i.e. no prompt)
+\fBadd\fR [-f] \fIbucket\fR \fIsecret\fR
+.RS
+Add a secret to the specified bucket.  The bucket will be created if it does not already exist. If a secret with the same name already exists for the specified bucket, then the user will be prompted to confirm overwriting the value.  If the -f option is passed, then the add operation will perform a forceful overwrite of the value. (i.e. no prompt)
+.RE
+
+\fBlist\fR|\fBls\fR [\fIbucket\fR]
+.RS
+Display the names of the secrets held in the bucket.  If no bucket is specified, then the names of all existing buckets will be displayed.
+.RE
+
+\fBlock\fR
+.RS
+Locks all keys used by encpass.sh using a password.  The user will be prompted to enter a password and confirm it.  A user should take care to securely store the password.  If the password is lost then keys can not be unlocked.  When keys are locked, secrets can not be retrieved. (e.g. the output of the values in the "show" command will be displayed as "**Locked**")
+.RE
+
+\fBremove\fR|\fBrm\fR [-f] \fIbucket\fR [\fIsecret\fR]
+.RS
+Remove a secret from the specified bucket.  If only a bucket is specified then the entire bucket (i.e. all secrets and keys) will be removed.  By default the user is asked to confirm the removal of the secret or the bucket.  If the -f option is passed then a forceful removal will be performed.  (i.e. no prompt)
+.RE
   
-    show [<bucket>] [<secret>]
-        Show the unencrypted value of the secret from the specified bucket.
-        If no secret is specified then all secrets for the bucket are displayed.
+\fBshow\fR [\fIbucket\fR] [\fIsecret\fR]
+.RS
+Show the unencrypted value of the secret from the specified bucket.  If no secret is specified then all secrets for the bucket are displayed.  If no bucket is specified then all secrets for all buckets are displayed.
+.RE
 
-    update <bucket> <secret>
-        Updates a secret in the specified bucket.  This command is similar
-        to using an "add -f" command, but it has a safety check to only 
-        proceed if the specified secret exists.  If the secret, does not
-        already exist, then an error will be reported. There is no forceable
-        update implemented.  Use "add -f" for any required forceable update
-        scenarios.
+\fBupdate\fR \fIbucket\fR \fIsecret\fR
+.RS
+Updates a secret in the specified bucket.  This command is similar to using an "add -f" command, but it has a safety check to only proceed if the specified secret exists.  If the secret, does not already exist, then an error will be reported. There is no forceable update implemented.  Use "add -f" for any required forceable update scenarios.
+.RE
 
-    unlock
-        Unlocks all the keys for encpass.sh.  The user will be prompted to 
-        enter the password and confirm it.
+\fBunlock\fR
+.RS
+Unlocks all the keys for encpass.sh.  The user will be prompted to enter the password and confirm it.
+.RE
 
-    dir
-        Prints out the current value of the ENCPASS_HOME_DIR environment variable.
+\fBdir\fR
+.RS
+Prints out the current value of the ENCPASS_HOME_DIR environment variable.
+.RE
 
-    help|--help|usage|--usage|?
-        Display this help message.
+\fBhelp\fR|\fB--help\fR|\fBusage\fR|\fB--usage\fR|\fB?\fR
+.RS
+Display this help manual.
+.RE
+
+Note: Wildcard handling is implemented for all commands that take secret and bucket names as arguments.  This enables performing operations like adding/removing a secret to/from multiple buckets at once.
+.SH AUTHOR
+Plyint LLC (contact@plyint.com) 
 EOF
 }
 
