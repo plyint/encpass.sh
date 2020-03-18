@@ -288,6 +288,7 @@ encpass_help() {
 	ENCPASS_HELP_SHOW_CMD_DESC="Show the unencrypted value of the secret from the specified bucket.  If no secret is specified then all secrets for the bucket are displayed.  If no bucket is specified then all secrets for all buckets are displayed."
 	ENCPASS_HELP_LOCK_CMD_DESC="Locks all keys used by encpass.sh using a password.  The user will be prompted to enter a password and confirm it.  A user should take care to securely store the password.  If the password is lost then keys can not be unlocked.  When keys are locked, secrets can not be retrieved. (e.g. the output of the values in the \"show\" command will be displayed as \"**Locked**\")"
 	ENCPASS_HELP_UNLOCK_CMD_DESC="Unlocks all the keys for encpass.sh.  The user will be prompted to enter the password and confirm it."
+	ENCPASS_HELP_REKEY_CMD_DESC="Replaces the key of the specified \fIbucket\fR and then re-encrypts all secrets for the bucket using the new key."
 	ENCPASS_HELP_EXTENSION_CMD_DESC="Enables/disables an extension for encpass.sh.  Only one extension can be enabled for one ENCPASS_HOME_DIR to ensure there are no unexpected side effects with multiple extensions enabled at once.  An extension must be named \"encpass-\fIextension\fR\.sh\" and placed in the directory \"./extensions/\fIextension\fR/\" relative to the \"encpass.sh\" script or be available in \$PATH. 
 
 
@@ -395,6 +396,11 @@ $ENCPASS_HELP_LOCK_CMD_DESC
 $ENCPASS_HELP_UNLOCK_CMD_DESC
 .RE
 
+\fBrekey\fR \fIbucket\fR
+.RS
+$ENCPASS_HELP_REKEY_CMD_DESC
+.RE
+
 \fBdir\fR
 .RS
 $ENCPASS_HELP_DIR_CMD_DESC
@@ -412,7 +418,6 @@ Display this help manual.
 
 Note: Wildcard handling is implemented for all commands that take secret and bucket names as arguments.  This enables performing operations like adding/removing a secret to/from multiple buckets at once.
 
-.SH EXTENSION COMMANDS
 ${ENCPASS_EXT_HELP_COMMANDS}
 
 .SH AUTHOR
