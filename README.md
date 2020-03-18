@@ -85,6 +85,8 @@ encpass.sh can be extended to provide additional capabilities or change existing
 The following extensions currently exist for encpass.sh:
 * [Keybase](extensions/keybase/KEYBASE.md) (Encrypts/Decrypts secrets using Keybase user/team keys and stores them in Keybase encrypted remote repositories) 
 
+If you'd like to make a new extension, the easiest way is to copy the Keybase extension and rename it using the format encpass-\<extension\>.sh.  Then modify the script by adding your logic to existing sections or add new sections.  You can override most functions of the main encpass.sh script in an extension script.  Once your extension is complete create a subfolder for your extension under the "extensions" directory and place your script in it.  If you would like your extension added to the official encpass.sh repository just open a pull request and I'll be happy to review it. :)
+
 ## Testing with Docker
 All testing can be carried out using the Makefile bundled with the repo.  This Makefile will build and run a docker image to carry out the testing; therefore, you must have docker installed on your local machine in order to execute the tests.
 
