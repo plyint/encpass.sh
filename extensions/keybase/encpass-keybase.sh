@@ -117,8 +117,12 @@ EOF
 }
 
 encpass_keybase_help_commands() {
+# Ignore unused warning. These variables are used when the main script sources them.
+# shellcheck disable=SC2034
 ENCPASS_HELP_LOCK_CMD_DESC="The lock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs out."
+# shellcheck disable=SC2034
 ENCPASS_HELP_UNLOCK_CMD_DESC="The unlock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs in."
+# shellcheck disable=SC2034
 ENCPASS_HELP_REKEY_CMD_DESC="The rekey command is not available.  Keys will be rotated automatically by the Keybase client using CLKR (https://keybase.io/docs/teams/clkr)."
 
 # Ignore unused warning. This script is used when the main script sources it.
@@ -287,17 +291,22 @@ encpass_keybase_cmd_status() {
 encpass_keybase_cmd_store() {
 	[ "[" = "$1" ] && encpass_die "Error: You must specify a bucket."
 
-	cd "$ENCPASS_HOME_DIR/secrets/$1" || return
-	SECRET_FILES="$(git status -s | grep .)"
+	# Allow globbing
+	# shellcheck disable=SC2027,SC2086
+	ENCPASS_BUCKET_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
+	for ENCPASS_B in $ENCPASS_BUCKET_LIST; do
+		cd "$ENCPASS_B" || return
+		SECRET_FILES="$(git status -s | grep .)"
 
-	ENCPASS_REMOTE_REPO="$(git config --get remote.origin.url)"
-	if [ ! -z "$SECRET_FILES" ]; then
-		CHANGES_FOR_SECRET_FILES="$(echo "$SECRET_FILES" | sed -e s/.enc//g | awk '{if ($1=="D") printf "removed:";if ($1=="A"||$1=="??") printf "added:";if ($1=="M") printf "modified:";if ($1=="R") printf "renamed:";printf $2" ";}')"
-		echo "Committing and pushing secret changes for bucket $1 to remote repo $ENCPASS_REMOTE_REPO..."
-		git add .
-		git commit -q -m "$(keybase whoami) ${CHANGES_FOR_SECRET_FILES}" && echo "$1 secret changes committed." 
-	fi
-	git push 2>&1 | grep 'Everything\|Syncing encrypted'
+		ENCPASS_REMOTE_REPO="$(git config --get remote.origin.url)"
+		if [ ! -z "$SECRET_FILES" ]; then
+			CHANGES_FOR_SECRET_FILES="$(echo "$SECRET_FILES" | sed -e s/.enc//g | awk '{if ($1=="D") printf "removed:";if ($1=="A"||$1=="??") printf "added:";if ($1=="M") printf "modified:";if ($1=="R") printf "renamed:";printf $2" ";}')"
+			echo "Committing and pushing secret changes for bucket $ENCPASS_B to remote repo $ENCPASS_REMOTE_REPO..."
+			git add .
+			git commit -q -m "$(keybase whoami) ${CHANGES_FOR_SECRET_FILES}" && echo "$ENCPASS_B secret changes committed." 
+		fi
+		git push 2>&1 | grep 'Everything\|Syncing encrypted'
+	done
 }
 
 
