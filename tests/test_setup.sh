@@ -2,56 +2,63 @@
 
 spawn ./helpers/create_default_secret.sh
 expect "Enter password:"
-send "secret1\r"
+send "s3cr3t1\r"
 expect "Confirm password:"
-send "secret1\r"
+send "s3cr3t1\r"
 expect eof
 
 spawn ./helpers/create_named_secret.sh
 expect "Enter mypassword:"
-send "secret2\r"
+send "s3cr3t2\r"
 expect "Confirm mypassword:"
-send "secret2\r"
+send "s3cr3t2\r"
 expect eof
 
-spawn ./helpers/create_bucket_named_secret.sh
+spawn ./helpers/create_user-defined_secret.sh
 expect "Enter mypassword:"
-send "secret3\r"
+send "s3cr3t3\r"
 expect "Confirm mypassword:"
-send "secret3\r"
+send "s3cr3t3\r"
 expect eof
 
-spawn ../encpass.sh add cmdbucket1 cmdsecret1
-expect "Enter cmdsecret1:"
-send "secret_text_for_cmdsecret1\r"
-expect "Confirm cmdsecret1:"
-send "secret_text_for_cmdsecret1\r"
+spawn ./helpers/directly_insert_secret.sh
+expect "Enter direct_password:"
+send "s3cr3t4\r"
+expect "Confirm direct_password:"
+send "s3cr3t4\r"
 expect eof
 
-spawn ../encpass.sh add cmdbucket1 cmdsecret2
-expect "Enter cmdsecret2:"
-send "secret_text_for_cmdsecret2\r"
-expect "Confirm cmdsecret2:"
-send "secret_text_for_cmdsecret2\r"
+spawn ../encpass.sh add first_bucket secret1
+expect "Enter secret1:"
+send "secret_text_for_secret1\r"
+expect "Confirm secret1:"
+send "secret_text_for_secret1\r"
 expect eof
 
-spawn ../encpass.sh add cmdbucket2 cmdsecret3
-expect "Enter cmdsecret3:"
-send "secret_text_for_cmdsecret3\r"
-expect "Confirm cmdsecret3:"
-send "secret_text_for_cmdsecret3\r"
+spawn ../encpass.sh add first_bucket secret2
+expect "Enter secret2:"
+send "secret_text_for_secret2\r"
+expect "Confirm secret2:"
+send "secret_text_for_secret2\r"
 expect eof
 
-spawn ../encpass.sh add cmdbucket2 cmdsecret4
-expect "Enter cmdsecret4:"
-send "secret_text_for_cmdsecret4\r"
-expect "Confirm cmdsecret4:"
-send "secret_text_for_cmdsecret4\r"
+spawn ../encpass.sh add second_bucket secret3
+expect "Enter secret3:"
+send "secret_text_for_secret3\r"
+expect "Confirm secret3:"
+send "secret_text_for_secret3\r"
 expect eof
 
-spawn ../encpass.sh add cmd* cmdsecret5
-expect "Enter cmdsecret5:"
-send "secret_text_for_cmdsecret5\r"
-expect "Confirm cmdsecret5:"
-send "secret_text_for_cmdsecret5\r"
+spawn ../encpass.sh add second_bucket secret4
+expect "Enter secret4:"
+send "secret_text_for_secret4\r"
+expect "Confirm secret4:"
+send "secret_text_for_secret4\r"
+expect eof
+
+spawn ../encpass.sh add \*bucket secret5
+expect "Enter secret5:"
+send "secret_text_for_secret5\r"
+expect "Confirm secret5:"
+send "secret_text_for_secret5\r"
 expect eof
