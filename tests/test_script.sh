@@ -32,27 +32,36 @@ test_complete() {
 test_run() {
 	. ../encpass.sh
 
-	desc="Get the default secret."
+	desc="Get a default secret."
 	password=$(get_secret create_default_secret.sh password)
-	if [ "$password" = "secret1" ]; then
+	if [ "$password" = "s3cr3t1" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Get the default secret from a user-defined bucket."
+	desc="Get a named secret from a default bucket."
 	password=$(get_secret create_named_secret.sh mypassword)
-	if [ "$password" = "secret2" ]; then
+	if [ "$password" = "s3cr3t2" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Get the user-defined secret from a user-defined bucket."
+	desc="Get a user-defined secret from a user-defined bucket."
 	password=$(get_secret mybucket mypassword)
-	if [ "$password" = "secret3" ]; then
+	if [ "$password" = "s3cr3t3" ]; then
+		test_success
+	else
+		test_failure
+	fi
+	echo $desc
+
+	desc="Get a directly inserted secret from a user-defined bucket."
+	password=$(get_secret mybucket direct_password)
+	if [ "$password" = "s3cr3t4" ]; then
 		test_success
 	else
 		test_failure
@@ -61,71 +70,81 @@ test_run() {
 
 	desc="Show default secret using show command."
 	password=$(../encpass.sh show create_default_secret.sh password)
-	if [ "$password" = "secret1" ]; then
+	if [ "$password" = "s3cr3t1" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Use show command to retrieve 1st secret added from command line for bucket \"cmdbucket1\"."
-	password=$(../encpass.sh show cmdbucket1 cmdsecret1)
-	if [ "$password" = "secret_text_for_cmdsecret1" ]; then
+	desc="Show 1st secret added from command line for bucket \"first_bucket\"."
+	password=$(../encpass.sh show first_bucket secret1)
+	if [ "$password" = "secret_text_for_secret1" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Use show command to retrieve 2nd secret added from command line for bucket \"cmdbucket1\"."
-	password=$(../encpass.sh show cmdbucket1 cmdsecret2)
-	if [ "$password" = "secret_text_for_cmdsecret2" ]; then
+	desc="Show 2nd secret added from command line for bucket \"first_bucket\"."
+	password=$(../encpass.sh show first_bucket secret2)
+	if [ "$password" = "secret_text_for_secret2" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Use show command to retrieve 1st secret added from command line for bucket \"cmdbucket2\"."
-	password=$(../encpass.sh show cmdbucket2 cmdsecret3)
-	if [ "$password" = "secret_text_for_cmdsecret3" ]; then
+	desc="Show 1st secret added from command line for bucket \"second_bucket\"."
+	password=$(../encpass.sh show second_bucket secret3)
+	if [ "$password" = "secret_text_for_secret3" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Use show command to retrieve 2nd secret added from command line for bucket \"cmdbucket2\"."
-	password=$(../encpass.sh show cmdbucket2 cmdsecret4)
-	if [ "$password" = "secret_text_for_cmdsecret4" ]; then
+	desc="Show 2nd secret added from command line for bucket \"second_bucket\"."
+	password=$(../encpass.sh show second_bucket secret4)
+	if [ "$password" = "secret_text_for_secret4" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Use show command to retrieve 3rd secret added from command line for bucket \"cmdbucket1\"."
-	password=$(../encpass.sh show cmdbucket1 cmdsecret5)
-	if [ "$password" = "secret_text_for_cmdsecret5" ]; then
+	desc="Show 3rd secret added from command line for bucket \"first_bucket\"."
+	password=$(../encpass.sh show first_bucket secret5)
+	if [ "$password" = "secret_text_for_secret5" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Use show command to retrieve 3rd secret added from command line for bucket \"cmdbucket2\"."
-	password=$(../encpass.sh show cmdbucket2 cmdsecret5)
-	if [ "$password" = "secret_text_for_cmdsecret5" ]; then
+	desc="Show 3rd secret added from command line for bucket \"second_bucket\"."
+	password=$(../encpass.sh show second_bucket secret5)
+	if [ "$password" = "secret_text_for_secret5" ]; then
 		test_success
 	else
 		test_failure
 	fi
 	echo $desc
 
-	desc="Remove all passwords added via the command line."
-	../encpass.sh rm -f "cmd*" >/dev/null
-	result=$(../encpass.sh ls "cmd*")
-	if [ "$result" = "Error: Bucket cmd* does not exist." ]; then
+	desc="Remove all passwords ending in \"bucket\"."
+	../encpass.sh rm -f "*bucket" >/dev/null
+	result=$(../encpass.sh ls "*bucket" 2>&1)
+	if [ "$result" = "Error: Bucket *bucket does not exist." ]; then
+		test_success
+	else
+		test_failure
+	fi
+	echo $desc
+
+	desc="Remove all remaining passwords."
+	../encpass.sh rm -f "*" >/dev/null
+	result=$(../encpass.sh ls "*" 2>&1)
+	if [ "$result" = "Error: Bucket * does not exist." ]; then
 		test_success
 	else
 		test_failure

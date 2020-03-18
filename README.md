@@ -1,8 +1,8 @@
 # encpass.sh
 
-encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts using OpenSSL. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within a script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
+encpass.sh provides a lightweight solution for using encrypted passwords in shell scripts. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within a script. This prevents shoulder surfing passwords and avoids storing the password in plain text, which could inadvertently be sent to or discovered by an individual at a later date.
 
-This script generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.
+The default OpenSSL implementation generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.
 
 Subsequent calls to retrieve a secret will not prompt for a secret to be entered as the file with the encrypted value already exists.
 
@@ -18,7 +18,7 @@ Note: By default, encpass.sh sets up a directory (.encpass) under the user's hom
 encpass.sh requires the following software to be installed:
 
 * POSIX compliant shell environment (sh, bash, ksh, zsh)
-* OpenSSL
+* OpenSSL or Extension replacement (See the "Extensions" section)
 
 Note: Even if you use fish or other types of modern shells, encpass.sh should still be usable as those shells typically support running POSIX compliant scripts.  You just won't be able to include encpass.sh in any fish specific scripts or other non-POSIX compliant scripts.
 
@@ -53,11 +53,11 @@ echo $password
 ## Command Line Management
 
 encpass.sh also provides a command line interface to perform the following management functions:
-- Add secrets/buckets
-- Remove secrets/buckets
-- List secrets/buckets
-- Show secrets/bucket
-- Lock/Unlock all keys for buckets
+* Add secrets/buckets
+* Remove secrets/buckets
+* List secrets/buckets
+* Show secrets/bucket
+* Lock/Unlock all keys for buckets
 
 For example, the following command will list the secrets stored for example.sh:
 ```
@@ -77,6 +77,15 @@ For example, you could store the .encpass directory on an encrypted filesystem o
 ```
 export ENCPASS_HOME_DIR=/keybase/private/<USERNAME>/.encpass
 ```
+
+## Extensions
+
+encpass.sh can be extended to provide additional capabilities or change existing functions.  One of the primary uses of the extension facility is to override the default encryption backend (OpenSSL) and implement a different backend.
+
+The following extensions currently exist for encpass.sh:
+* [Keybase](extensions/keybase/KEYBASE.md) (Encrypts/Decrypts secrets using Keybase user/team keys and stores them in Keybase encrypted remote repositories) 
+
+If you'd like to make a new extension, the easiest way is to copy the Keybase extension and rename it using the format encpass-\<extension\>.sh.  Then modify the script by adding your logic to existing sections or add new sections.  You can override most functions of the main encpass.sh script in an extension script.  Once your extension is complete create a subfolder for your extension under the "extensions" directory and place your script in it.  If you would like your extension added to the official encpass.sh repository just open a pull request and I'll be happy to review it. :)
 
 ## Testing with Docker
 All testing can be carried out using the Makefile bundled with the repo.  This Makefile will build and run a docker image to carry out the testing; therefore, you must have docker installed on your local machine in order to execute the tests.

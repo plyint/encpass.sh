@@ -1,0 +1,74 @@
+# encpass.sh - Bash Completions
+###############################################################################
+# Copyright (C) 2020 Plyint, LLC <contact@plyint.com>. All Rights Reserved.
+# This file is licensed under the MIT License (MIT). 
+# Please see LICENSE.txt for more information.
+###############################################################################
+
+_encpass_complete_entries () {
+	local prefix="${ENCPASS_HOME_DIR:-$HOME/.encpass/}"
+	local autoexpand=${1:-0}
+
+	prefix="${prefix%/}/secrets/"
+	CL=$COMP_CWORD
+
+	if [[ ${COMP_WORDS[$CL-1]} != ${COMP_WORDS[1]} && $autoexpand -eq 1 && ${COMP_WORDS[$CL-1]:0:1} != "-" ]]; then
+		prefix="${prefix%/}/${COMP_WORDS[$CL-1]}/"
+	fi
+
+	if [[ ${COMP_WORDS[$CL-1]} != ${COMP_WORDS[1]} && $autoexpand -eq 0 ]]; then
+		items=()
+	else
+		items=($(compgen -f $prefix))
+	fi
+
+	for item in ${items[@]}; do
+		[[ $item =~ /\.[^/]*$ ]] && continue
+
+		if [[ $item =~ (.*)(\.enc)$ ]]; then
+			COMPREPLY+=($(compgen -W "${BASH_REMATCH[1]#$prefix}" -- ${cur}))
+		else 
+			item="${item%}"
+			COMPREPLY+=($(compgen -W "${item#$prefix}" -- ${cur}))
+		fi
+	done
+}
+
+_encpass_complete_extension_cmd () {
+	CL=$COMP_CWORD
+	item="${COMP_WORDS[$CL]}"
+	commands=("enable" "disable" "list")
+	for command in ${commands[@]}; do
+		if [[ $command =~ ($item) ]]; then
+		  if [[ "$command" != "$item" ]] && [[ "$CL" = "2" && "$item" != " " ]]; then
+			  COMPREPLY+=($(compgen -W $command -- ${cur}))
+			fi
+	  fi
+	done
+}
+
+_encpass()
+{
+	COMPREPLY=()
+	local cur="${COMP_WORDS[COMP_CWORD]}"
+	local commands="ls list show add update rm remove lock unlock extension dir rekey help"
+	if [[ $COMP_CWORD -gt 1 ]]; then
+		case "${COMP_WORDS[1]}" in
+			lock|unlock)
+				;;
+			ls|list|rekey)
+				_encpass_complete_entries
+				;;
+			show|add|update|rm|remove)
+				_encpass_complete_entries 1
+				;;
+			extension)
+				_encpass_complete_extension_cmd
+				;;
+		esac
+	else
+		COMPREPLY+=($(compgen -W "${commands}" -- ${cur}))
+	fi
+}
+
+complete -o filenames -F _encpass encpass encpass.sh
