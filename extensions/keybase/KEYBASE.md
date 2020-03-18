@@ -20,14 +20,14 @@ Extension keybase enabled.
 ## Getting Started
 Using the encpass.sh Keybase extension is similar to using the default encpass.sh OpenSSL implementation, but you must first setup and clone the Keybase repos.  Here is an example to get your started.  Will be using my Keybase username, ahnick, and a repo called "personal" for the purposes of this example.
 
-First create a repo in Keybase.
+First, create a repo in Keybase.
 ```
 $ encpass.sh create-repo ahnick personal
 Creating personal repo for ahnick...
 personal repo for ahnick created.
 ```
 
-List the repos to see your new repo you just created.
+Next, list the repos to see your new repo you just created.
 ```
 $ encpass.sh list-repos
 OWNER                           REPO                     CLONE COMMAND           
@@ -35,7 +35,7 @@ OWNER                           REPO                     CLONE COMMAND
 ahnick                          personal                 /usr/local/bin/encpass.sh clone-repo ahnick personal 
 ```
 
-Copy and paste the CLONE COMMAND provided above to clone the Keybase repo to your local filesystem.
+You should see your newly created repo.  Copy and paste the CLONE COMMAND provided above to clone the Keybase repo to your local filesystem.
 ```
 $ /usr/local/bin/encpass.sh clone-repo ahnick personal
 Cloning repo personal for ahnick...
@@ -44,7 +44,7 @@ encpass repo personal for ahnick is empty. Initializing...
 personal repo for ahnick is initialized.
 ```
 
-If you run a "show" command now you will be able to see that a new bucket has been setup for the repo, but it doesn't contain any passwords yet.
+If you run a "show" command now, you will be able to see that a new bucket has been setup for the repo, but it doesn't contain any passwords yet.
 ```
 $ encpass.sh show ahnick~personal
 ahnick~personal:
@@ -66,7 +66,7 @@ ahnick~personal:
 password = toomanysecrets
 ```
 
-Our secret exists on the local filesystem, but need to be pushed to the Keybase remote repo.  We can confirm this by running a status command.
+Our secret exists on the local filesystem, but needs to be pushed to the Keybase remote repo.  We can confirm this by running a "status" command.
 ```
 $ encpass.sh status
 
