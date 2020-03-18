@@ -54,9 +54,9 @@ _encpass()
 	local commands="ls list show add update rm remove rekey lock unlock extension dir help create-repo delete-repo clone-repo list-repos refresh status store"
 	if [[ $COMP_CWORD -gt 1 ]]; then
 		case "${COMP_WORDS[1]}" in
-			lock|unlock|status|refresh|list-repos|create-repo|clone-repo|delete-repo)
+			status|refresh|list-repos|create-repo|clone-repo|delete-repo)
 				;;
-			ls|list|rekey|store)
+			ls|list|store)
 				_encpass_complete_entries
 				;;
 			show|add|update|rm|remove)
