@@ -1,6 +1,10 @@
 # encpass-keybase.sh - Keybase Extension
 
-The keybase extension allows encpass.sh to use Keybase keys and encrypted git repos to store and access secrets.  This means the default OpenSSL encryption mechanism is replaced with the builtin encryption performed by the Keybase client.  When a secret is encrypted, it is encrypted with the Per-User Keys for either your Keybase user or the Keybase team your specify.  This means when someone is added to a team in Keybase they will immediately be able to clone and have access to the encpass.sh secrets in the Keybase git repo.  Also, Keybase will take care of rotating the keys for the team when a user is removed.
+The keybase extension allows encpass.sh to use Keybase keys and encrypted git repos to store and access secrets.  It replaces the default OpenSSL encryption mechanism with encryption performed by the Keybase client.
+
+When a secret is encrypted, it is encrypted with the Per-User Keys for either your Keybase user or the Keybase team that maps to the bucket.  This means when someone is added to a team in Keybase they will immediately be able to clone and have access to the encpass.sh secrets in the Keybase git repo. You don't need to do anything extra for them to start accessing the shared secrets they need for their work. 
+
+In team scenarios, Keybase will take care of rotating the keys for the team as usual when a user is removed from the team.  This means the user will no longer have access to the encrypted git repo in Keybase when the user is removed.  With that said, you should still remove existing secrets and update them with replacement secrets just as you would normally do, as the user still might have a local copy of the secret.
 
 ## Setup
 To setup the Keybase extension, clone the encpass.sh GitHub repo and place the directory on your path OR place the encpass-keybase.sh script in a directory on your $PATH.  Once completed you should be able to run the following command to see that the extension is available:
