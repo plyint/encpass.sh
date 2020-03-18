@@ -91,6 +91,18 @@ corresponding Keybase remote repo.
 	fi
 }
 
+encpass_keybase_cmd_lock() {
+	encpass_die "The lock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs out."
+}
+
+encpass_keybase_cmd_unlock() {
+	encpass_die "The unlock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs in."
+}
+
+encpass_keybase_cmd_rekey() {
+	encpass_die "The rekey command is not available.  Keys will be rotated automatically by the Keybase client using CLKR (https://keybase.io/docs/teams/clkr)."
+}
+
 encpass_keybase_help_extension() {
 # Ignore unused warning. This script is used when the main script sources it.
 # shellcheck disable=SC2034
@@ -105,9 +117,14 @@ EOF
 }
 
 encpass_keybase_help_commands() {
+ENCPASS_HELP_LOCK_CMD_DESC="The lock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs out."
+ENCPASS_HELP_UNLOCK_CMD_DESC="The unlock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs in."
+ENCPASS_HELP_REKEY_CMD_DESC="The rekey command is not available.  Keys will be rotated automatically by the Keybase client using CLKR (https://keybase.io/docs/teams/clkr)."
+
 # Ignore unused warning. This script is used when the main script sources it.
 # shellcheck disable=SC2034
 ENCPASS_EXT_HELP_COMMANDS=$(cat << EOF
+.SH EXTENSION COMMANDS
 \fBcreate-repo\fR \fIteam/user\fR \fIrepository\fR
 .RS
 Creates a remote repo in Keybase for the Keybase team/user
