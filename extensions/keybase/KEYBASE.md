@@ -18,7 +18,7 @@ Extension keybase enabled.
 ```
 
 ## Getting Started
-Using the encpass.sh Keybase extension is similar to using the default encpass.sh OpenSSL implementation, but you must first setup and clone the Keybase repos.  Here is an example to get your started.  Will be using my Keybase username, ahnick, and a repo called "personal" for the purposes of this example.
+Using the encpass.sh Keybase extension is similar to using the default encpass.sh OpenSSL implementation, but you must first setup and clone the Keybase repos.  Here is an example to get your started.  We will be using my Keybase username, ahnick, and a repo called "personal" for the purposes of this example.
 
 First, create a repo in Keybase.
 ```
@@ -114,7 +114,7 @@ The following commands are disabled for the Keybase extension:
 You may NOT create a bucket directly using the "add" command without cloning.  This is done to ensure that the local filesystem bucket is properly setup and tracking to the remote Keybase git repo.
 
 ## Questions
-If you have more questions see the help documentation by running
+If you have more questions, see the help documentation by running the usual help command
 ```
 encpass.sh ?
 ```
