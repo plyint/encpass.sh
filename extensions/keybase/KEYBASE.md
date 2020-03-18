@@ -35,9 +35,9 @@ The following commands are disabled for the Keybase extension:
 
 ## Bucket creation
 The first time you are creating a bucket to hold secrets you will need to do the following:
-(1) Create the remote Keybase repo.
-(2) Clone the remote Keybase repo to your local filesystem.
-(3) Add a secret to the bucket that was created during the clone step.
+1. Create the remote Keybase repo.
+2. Clone the remote Keybase repo to your local filesystem.
+3. Add a secret to the bucket that was created during the clone step.
 
 You may NOT create a bucket directly using the "add" command without cloning.  This is done to ensure that the local filesystem bucket is properly setup and tracking to the remote Keybase git repo.
 
