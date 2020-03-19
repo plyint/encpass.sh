@@ -11,7 +11,7 @@ To setup the Keybase extension, clone the encpass.sh GitHub repo and place the d
 
 ```
 $ encpass.sh extension list
-The following extension are available:
+The following extensions are available:
 keybase
 ```
 
