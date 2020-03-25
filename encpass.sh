@@ -784,8 +784,12 @@ encpass_cmd_rekey() {
 encpass_cmd_extension() {
 	encpass_ext_func "cmd_extension" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
-	[ ! -d "$ENCPASS_HOME_DIR" ] && mkdir -m 700 "$ENCPASS_HOME_DIR"
-	if [ "$1" = "enable" ]; then
+	if [ -z "$1" ]; then
+		if [ -f "$ENCPASS_HOME_DIR/.extension" ]; then
+			ENCPASS_EXTENSION="$(cat "$ENCPASS_HOME_DIR/.extension")"
+			echo "The extension $ENCPASS_EXTENSION is currently enabled."
+		fi
+	elif [ "$1" = "enable" ]; then
 		if [ -f "$ENCPASS_HOME_DIR/.extension" ]; then
 			ENCPASS_EXTENSION="$(cat "$ENCPASS_HOME_DIR/.extension")"
 			echo "The extension $ENCPASS_EXTENSION is enabled.  You must disable it first to enable a new extension." 
@@ -799,7 +803,7 @@ encpass_cmd_extension() {
 				fi
 			else
 				ENCPASS_PATH_DIR="$(dirname "$(command -v encpass.sh)")"
-				ENCPASS_EXTENSION_FILE_LIST="$(ls -1p "$ENCPASS_PATH_DIR/encpass-*")"
+				ENCPASS_EXTENSION_FILE_LIST="$(ls -1p "$ENCPASS_PATH_DIR/encpass-"*)"
 				for ENCPASS_EXTENSION_FILE in $ENCPASS_EXTENSION_FILE_LIST; do
 					ENCPASS_EXTENSION="$(basename "$ENCPASS_EXTENSION_FILE" | awk -F '[-.]' '{print $2}')"
 					if [ "$ENCPASS_EXTENSION" = "$2" ]; then
@@ -840,11 +844,6 @@ encpass_cmd_extension() {
 				echo "$ENCPASS_EXTENSION"
 			done
 		fi
-	elif [ -z "$1" ]; then
-		if [ -f "$ENCPASS_HOME_DIR/.extension" ]; then
-			ENCPASS_EXTENSION="$(cat "$ENCPASS_HOME_DIR/.extension")"
-			echo "The extension $ENCPASS_EXTENSION is currently enabled."
-		fi
 	else
 		echo "Error: unrecognized argument $1"
 	fi
@@ -861,7 +860,7 @@ case "$1" in
 	unlock )    shift; encpass_checks; encpass_cmd_unlock "$@" ;;
 	dir )       shift; encpass_checks; encpass_cmd_dir "$@" ;;
 	rekey )     shift; encpass_checks; encpass_cmd_rekey "$@" ;;
-	extension ) shift; encpass_cmd_extension "$@" ;;
+	extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
 	help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
 	* )
 		if [ ! -z "$1" ]; then
