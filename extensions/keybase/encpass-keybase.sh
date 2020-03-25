@@ -233,7 +233,13 @@ encpass_keybase_cmd_delete_repo() {
 	encpass_keybase_repo_type "$1"
 
 	if [ "$ENCPASS_KEYBASE_REPO_TYPE" = "team" ]; then
-		keybase git delete --team="$1" "$2.encpass"
+		ENCPASS_KEYBASE_USER=$(keybase whoami)
+		ENCPASS_KEYBASE_ROLE="$(keybase team list-members "$1" | grep "$ENCPASS_KEYBASE_USER" | awk -F '  ' '{printf $2}')"
+		if [ "$ENCPASS_KEYBASE_ROLE" = "admin" ]; then
+			keybase git delete --team="$1" "$2.encpass"
+		else
+			echo "You are a $ENCPASS_KEYBASE_ROLE and do not have sufficient priviledges to delete the repo $2"
+		fi
 	else
 		keybase git delete "$2.encpass"
 	fi
