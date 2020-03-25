@@ -250,10 +250,10 @@ encpass_keybase_cmd_list_repos() {
 
 if [ ! -z "$ENCPASS_KEYBASE_LIST" ];then
 #	echo "$ENCPASS_KEYBASE_LIST" | grep private | sed 's/\//~/g' | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\~/); printf "%-31s %-24s %s %s %s \n", whoami, a[1], script" clone", whoami, a[1]; }'
-echo "$ENCPASS_KEYBASE_LIST" | grep private | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\./); printf "%-31s %-24s %-16s %s %s \n", whoami, a[1], script" clone-repo", whoami, a[1]; }'
+echo "$ENCPASS_KEYBASE_LIST" | grep private | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\./); printf "%-31s %-24s %-16s %s %s \n", whoami, a[1], script" clone-repo", whoami, a[1]; }' 2>/dev/null
 
 #	echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$0" '{split($1,a,/\./); if (a[3] != "encpass") printf "%s.%-24s %-24s %-16s %s.%s %s \n", a[1], a[2], a[3], script" clone", a[1], a[2], a[3]; else printf "%-31s %-24s %-16s %s %s \n", a[1], a[2], script" clone", a[1], a[2]; }'
-echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$0" '{split($1,a,/\~/); split(a[2],b,/\./); printf "%-31s %-24s %-16s %s %s \n", a[1], b[1], script" clone-repo", a[1], b[1]; }'
+echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$0" '{split($1,a,/\~/); split(a[2],b,/\./); printf "%-31s %-24s %-16s %s %s \n", a[1], b[1], script" clone-repo", a[1], b[1]; }' 2>/dev/null
 
 fi
 }
