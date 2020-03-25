@@ -867,7 +867,7 @@ case "$1" in
 	* )
 		if [ ! -z "$1" ]; then
 		  encpass_checks
-			encpass_ext_func "commands" "$@" [ ! -z "$ENCPASS_EXT_FUNC" ] && return
+			encpass_ext_func "commands" "$@" [ ! -z "$ENCPASS_EXT_FUNC" ] && exit 0
 			encpass_die "Command not recognized. See \"encpass.sh help\" for a list commands."
 		fi
 		;;
