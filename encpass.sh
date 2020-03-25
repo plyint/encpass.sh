@@ -34,7 +34,7 @@ encpass_checks() {
 		if [ -f "./extensions/$ENCPASS_EXTENSION/$ENCPASS_EXT_FILE" ]; then
 			# shellcheck source=/dev/null
 		  . "./extensions/$ENCPASS_EXTENSION/$ENCPASS_EXT_FILE"
-		elif [ ! -z "$(command -v encpass-$ENCPASS_EXTENSION.sh)" ]; then 
+		elif [ ! -z "$(command -v encpass-"$ENCPASS_EXTENSION".sh)" ]; then 
 			# shellcheck source=/dev/null
 			. "$(command -v encpass-$ENCPASS_EXTENSION.sh)"
 		else
@@ -834,7 +834,7 @@ encpass_cmd_extension() {
 			done
 		else
 			ENCPASS_PATH_DIR="$(dirname "$(command -v encpass.sh)")"
-			ENCPASS_EXTENSION_FILE_LIST="$(ls -1p "$ENCPASS_PATH_DIR/encpass-*")"
+			ENCPASS_EXTENSION_FILE_LIST="$(ls -1p "$ENCPASS_PATH_DIR/encpass-"*)"
 			for ENCPASS_EXTENSION_FILE in $ENCPASS_EXTENSION_FILE_LIST; do
 				ENCPASS_EXTENSION="$(basename "$ENCPASS_EXTENSION_FILE" | awk -F '[-.]' '{print $2}')"
 				echo "$ENCPASS_EXTENSION"
