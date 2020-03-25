@@ -11,7 +11,6 @@
 ################################################################################
 
 encpass_keybase_checks() {
-	[ ! -d "$ENCPASS_HOME_DIR" ] && mkdir -m 700 "$ENCPASS_HOME_DIR"
 	[ ! -d "$ENCPASS_HOME_DIR/secrets" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
 }
 

@@ -26,6 +26,7 @@ encpass_checks() {
 	if [ -z "$ENCPASS_HOME_DIR" ]; then
 		ENCPASS_HOME_DIR="$(encpass_get_abs_filename ~)/.encpass"
 	fi
+	[ ! -d "$ENCPASS_HOME_DIR" ] && mkdir -m 700 "$ENCPASS_HOME_DIR"
 
 	if [ -f "$ENCPASS_HOME_DIR/.extension" ]; then
 		# Extension enabled, load it...
@@ -51,7 +52,6 @@ encpass_checks() {
 			exit 1
 		fi
 
-		[ ! -d "$ENCPASS_HOME_DIR" ] && mkdir -m 700 "$ENCPASS_HOME_DIR"
 		[ ! -d "$ENCPASS_HOME_DIR/keys" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/keys"
 		[ ! -d "$ENCPASS_HOME_DIR/secrets" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
 
@@ -788,6 +788,8 @@ encpass_cmd_extension() {
 		if [ -f "$ENCPASS_HOME_DIR/.extension" ]; then
 			ENCPASS_EXTENSION="$(cat "$ENCPASS_HOME_DIR/.extension")"
 			echo "The extension $ENCPASS_EXTENSION is currently enabled."
+		else
+		  echo "No extension set. Using default OpenSSL implementation"
 		fi
 	elif [ "$1" = "enable" ]; then
 		if [ -f "$ENCPASS_HOME_DIR/.extension" ]; then
