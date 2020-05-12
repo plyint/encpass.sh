@@ -12,6 +12,7 @@
 
 encpass_keybase_checks() {
 	[ ! -d "$ENCPASS_HOME_DIR/secrets" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
+	[ ! -d "$ENCPASS_HOME_DIR/export" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/export"
 }
 
 encpass_keybase_include_init() {
