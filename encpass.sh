@@ -54,6 +54,7 @@ encpass_checks() {
 
 		[ ! -d "$ENCPASS_HOME_DIR/keys" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/keys"
 		[ ! -d "$ENCPASS_HOME_DIR/secrets" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
+		[ ! -d "$ENCPASS_HOME_DIR/export" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/export"
 
 	fi
 
@@ -289,6 +290,8 @@ encpass_help() {
 	ENCPASS_HELP_LOCK_CMD_DESC="Locks all keys used by encpass.sh using a password.  The user will be prompted to enter a password and confirm it.  A user should take care to securely store the password.  If the password is lost then keys can not be unlocked.  When keys are locked, secrets can not be retrieved. (e.g. the output of the values in the \"show\" command will be displayed as \"**Locked**\")"
 	ENCPASS_HELP_UNLOCK_CMD_DESC="Unlocks all the keys for encpass.sh.  The user will be prompted to enter the password and confirm it."
 	ENCPASS_HELP_REKEY_CMD_DESC="Replaces the key of the specified \fIbucket\fR and then re-encrypts all secrets for the bucket using the new key."
+	ENCPASS_HELP_EXPORT_CMD_DESC="Export the encrypted secret(s) for the specified \fIbucket\fR to a gzip compressed archive file (tar.gz)."
+	ENCPASS_HELP_IMPORT_CMD_DESC="Import the encrypted secret(s) from a gzip compressed archive file (tar.gz)."
 	ENCPASS_HELP_EXTENSION_CMD_DESC="Enables/disables an extension for encpass.sh.  Only one extension can be enabled for one ENCPASS_HOME_DIR to ensure there are no unexpected side effects with multiple extensions enabled at once.  An extension must be named \"encpass-\fIextension\fR\.sh\" and placed in the directory \"./extensions/\fIextension\fR/\" relative to the \"encpass.sh\" script or be available in \$PATH. 
 
 
@@ -325,7 +328,7 @@ A lightweight solution for using encrypted passwords in shell scripts. It allows
 
 This script generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.
 
-Subsequent calls to retrieve a secret will not prompt for a secret to be entered as the file with the encrypted value already exists.  
+Subsequent calls to retrieve a secret will not prompt for the value of that secret to be entered as the file with the encrypted value already exists.  
 
 Note: By default, encpass.sh uses OpenSSL to handle the encryption/decryption and sets up a directory (.encpass) under the user's home directory where keys and secrets will be stored.  This directory can be overridden by setting the environment variable ENCPASS_HOME_DIR to a directory of your choice.  
 
@@ -404,6 +407,16 @@ $ENCPASS_HELP_REKEY_CMD_DESC
 \fBdir\fR
 .RS
 $ENCPASS_HELP_DIR_CMD_DESC
+.RE
+
+\fBexport\fR [\fIbucket\fR] [\fIsecret\fR]
+.RS
+$ENCPASS_HELP_EXPORT_CMD_DESC
+.RE
+
+\fBimport\fR \fIfile\fR
+.RS
+$ENCPASS_HELP_IMPORT_CMD_DESC
 .RE
 
 \fBextension\fR [\fIaction\fR] [\fIextension\fR]
@@ -781,6 +794,69 @@ encpass_cmd_rekey() {
 	fi
 }
 
+encpass_cmd_export() {
+	encpass_ext_func "cmd_export" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
+
+	[ -z "$1" ] && ENCPASS_EXPORT_DIR="*" || ENCPASS_EXPORT_DIR=$1
+
+	[ -z "$ENCPASS_EXTENSION" ] && ENCPASS_EXPORT_TYPE="openssl" || ENCPASS_EXPORT_TYPE="$ENCPASS_EXTENSION"
+  ENCPASS_EXPORT_FILENAME="encpass-$ENCPASS_EXPORT_TYPE-$(date '+%Y-%m-%d-%s').tar.gz"
+	if [ ! -z "$2" ]; then
+		if [ ! -f "$ENCPASS_HOME_DIR/secrets/$ENCPASS_EXPORT_DIR/$2.enc" ]; then
+			encpass_die "Secret $2 does not exist for bucket $ENCPASS_EXPORT_DIR"
+		fi
+		echo "Exporting secret $2 for bucket $1.."
+		tar -C "$ENCPASS_HOME_DIR" -czf "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" "secrets/$ENCPASS_EXPORT_DIR/$2.enc"
+		if [ -f "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" ]; then
+			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/export"
+		fi
+	else
+		# Allow globbing
+		# shellcheck disable=SC2027,SC2086
+		ENCPASS_EXPORT_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$ENCPASS_EXPORT_DIR"" 2>/dev/null)"
+
+		if [ -z "$ENCPASS_EXPORT_LIST" ]; then
+			if [ "$ENCPASS_EXPORT_DIR" = "*" ]; then
+				encpass_die "Error: No buckets exist."
+			else
+				encpass_die "Error: Bucket $1 does not exist."
+			fi
+		fi
+
+		echo "Exporting all secrets for bucket $1"
+		cd "$ENCPASS_HOME_DIR" || encpass_die "Could not change to $ENCPASS_HOME_DIR directory"
+		# Allow globbing
+		# shellcheck disable=SC2027,SC2086
+		tar -C "$ENCPASS_HOME_DIR" -czf "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" --exclude="[.]*" secrets/$ENCPASS_EXPORT_DIR
+		if [ -f "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" ]; then
+			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/export"
+		fi
+	fi
+}
+
+encpass_cmd_import() {
+	encpass_ext_func "cmd_import" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
+
+	[ -z "$1" ] && encpass_die "You must specify a filename to import."
+
+	if [ -f "$1" ]; then
+		printf "%s" "You are about to import secrets from file $1 into directory $ENCPASS_HOME_DIR/secrets/."
+		printf "%s" "Importation will overwrite any existing secrets that have the same name.\n"
+		printf "%s" "Are you sure you want to proceed with the import? [y/N]"
+
+		ENCPASS_CONFIRM="$(encpass_getche)"
+		printf "\n"
+		if [ "$ENCPASS_CONFIRM" != "Y" ] && [ "$ENCPASS_CONFIRM" != "y" ]; then
+			exit 0
+		fi
+
+		echo "Importing secrets from file $1.."
+		tar -C "$ENCPASS_HOME_DIR" -xzf "$1" "secrets/"
+	else
+		encpass_die "Error: Import file $1 does not exist."
+	fi
+}
+
 encpass_cmd_extension() {
 	encpass_ext_func "cmd_extension" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
@@ -862,13 +938,17 @@ case "$1" in
 	unlock )    shift; encpass_checks; encpass_cmd_unlock "$@" ;;
 	dir )       shift; encpass_checks; encpass_cmd_dir "$@" ;;
 	rekey )     shift; encpass_checks; encpass_cmd_rekey "$@" ;;
+	export )    shift; encpass_checks; encpass_cmd_export "$@" ;;
+	import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
 	extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
 	help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
 	* )
 		if [ ! -z "$1" ]; then
 		  encpass_checks
-			encpass_ext_func "commands" "$@" [ ! -z "$ENCPASS_EXT_FUNC" ] && exit 0
-			encpass_die "Command not recognized. See \"encpass.sh help\" for a list commands."
+			if [ "$(basename "$0")" = "encpass.sh" ]; then
+				encpass_ext_func "commands" "$@" [ ! -z "$ENCPASS_EXT_FUNC" ] && exit 0
+				encpass_die "Command not recognized. See \"encpass.sh help\" for a list commands."
+			fi
 		fi
 		;;
 esac
