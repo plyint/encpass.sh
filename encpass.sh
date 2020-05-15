@@ -927,28 +927,28 @@ encpass_cmd_extension() {
 	fi
 }
 
-# Subcommands for cli support
-case "$1" in
-	add )       shift; encpass_checks; encpass_cmd_add "$@" ;;
-	update )    shift; encpass_checks; encpass_cmd_update "$@" ;;
-	rm|remove ) shift; encpass_checks; encpass_cmd_remove "$@" ;;
-	show )      shift; encpass_checks; encpass_cmd_show "$@" ;;
-	ls|list )   shift; encpass_checks; encpass_cmd_list "$@" ;;
-	lock )      shift; encpass_checks; encpass_cmd_lock "$@" ;;
-	unlock )    shift; encpass_checks; encpass_cmd_unlock "$@" ;;
-	dir )       shift; encpass_checks; encpass_cmd_dir "$@" ;;
-	rekey )     shift; encpass_checks; encpass_cmd_rekey "$@" ;;
-	export )    shift; encpass_checks; encpass_cmd_export "$@" ;;
-	import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
-	extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
-	help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
-	* )
-		if [ ! -z "$1" ]; then
-		  encpass_checks
-			if [ "$(basename "$0")" = "encpass.sh" ]; then
+if [ "$(basename "$0")" = "encpass.sh" ]; then
+	# Subcommands for cli support
+	case "$1" in
+		add )       shift; encpass_checks; encpass_cmd_add "$@" ;;
+		update )    shift; encpass_checks; encpass_cmd_update "$@" ;;
+		rm|remove ) shift; encpass_checks; encpass_cmd_remove "$@" ;;
+		show )      shift; encpass_checks; encpass_cmd_show "$@" ;;
+		ls|list )   shift; encpass_checks; encpass_cmd_list "$@" ;;
+		lock )      shift; encpass_checks; encpass_cmd_lock "$@" ;;
+		unlock )    shift; encpass_checks; encpass_cmd_unlock "$@" ;;
+		dir )       shift; encpass_checks; encpass_cmd_dir "$@" ;;
+		rekey )     shift; encpass_checks; encpass_cmd_rekey "$@" ;;
+		export )    shift; encpass_checks; encpass_cmd_export "$@" ;;
+		import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
+		extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
+		help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
+		* )
+			if [ ! -z "$1" ]; then
+				encpass_checks
 				encpass_ext_func "commands" "$@" [ ! -z "$ENCPASS_EXT_FUNC" ] && exit 0
 				encpass_die "Command not recognized. See \"encpass.sh help\" for a list commands."
 			fi
-		fi
-		;;
-esac
+			;;
+	esac
+fi
