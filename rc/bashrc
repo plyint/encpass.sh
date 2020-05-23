@@ -1,0 +1,6 @@
+# encpass.sh
+alias ep="encpass.sh"
+ehd() { export ENCPASS_HOME_DIR="$1"; [ -f "$1/completion" ] && . "$1/completion"; }
+export ENCPASS_HOME_DIR="$HOME/.encpass"
+export ENCPASS_DIR_LIST="$HOME/.encpass" # colon delimited list of dirs
+ehd $ENCPASS_HOME_DIR
