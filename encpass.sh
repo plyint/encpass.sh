@@ -199,7 +199,7 @@ encpass_die() {
   echo "$@" >&2
   exit 1
 }
-
+#LITE
 
 ##########################################################
 # COMMAND LINE MANAGEMENT SUPPORT
@@ -305,6 +305,7 @@ By default, the import command will display the \fIENCPASS_HOME_DIR\fR location 
 
 \fIaction\fR must be set to either \"enable\" (enables an extension), \"disable\" (disables the current extension), or \"list\" (displays the available extensions).  If \fIaction\fR is set to \"enable\" then the name of the extension must be passed as an additional parameter. If no \fIaction\fR is specified then the currently enabled extension is displayed." 
 	ENCPASS_HELP_DIR_CMD_DESC="Prints out the current directory that ENCPASS_HOME_DIR is set to.  If the optional subcommand \"ls\" is passed, the ENCPASS_DIR_LIST environment variable will be parsed as a colon delimited list of directories and displayed on stdout."
+	ENCPASS_HELP_LITE_CMD_DESC="Generates a lightweight version of encpass.sh by removing the command line management code.  It does this by searching for the comment #LITE and truncates the file to that line number.  The truncated file will be output to stdout.  You can redirect the output to a new file of your choosing.  (e.g. encpass.sh lite > encpass-lite.sh)"
 
 	# Load extension description and additional commands if they exist
 	if [ ! -z "$ENCPASS_EXTENSION" ]; then
@@ -431,6 +432,12 @@ $ENCPASS_HELP_IMPORT_CMD_DESC
 .RS
 $ENCPASS_HELP_EXTENSION_CMD_DESC
 .RE
+
+\fBlite\fR
+.RS
+$ENCPASS_HELP_LITE_CMD_DESC
+.RE
+
 
 \fBhelp\fR|\fB--help\fR|\fBusage\fR|\fB--usage\fR|\fB?\fR
 .RS
@@ -1126,6 +1133,12 @@ encpass_cmd_extension() {
 	fi
 }
 
+encpass_cmd_lite() {
+	encpass_ext_func "cmd_lite" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
+
+	head -n$(awk '/\#LITE/{print NR;exit}' $0) $0
+}
+
 if [ "$(basename "$0")" = "encpass.sh" ]; then
 	# Subcommands for cli support
 	case "$1" in
@@ -1141,6 +1154,7 @@ if [ "$(basename "$0")" = "encpass.sh" ]; then
 		export )    shift; encpass_checks; encpass_cmd_export "$@" ;;
 		import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
 		extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
+		lite )      shift; encpass_checks; encpass_cmd_lite "$@" ;;
 		help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
 		* )
 			if [ ! -z "$1" ]; then
