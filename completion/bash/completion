@@ -47,6 +47,19 @@ _encpass_complete_extension_cmd () {
 	done
 }
 
+_encpass_complete_dir_cmd() {
+	CL=$COMP_CWORD
+	item="${COMP_WORDS[$CL]}"
+	commands=("ls")
+	for command in ${commands[@]}; do
+		if [[ $command =~ ($item) ]]; then
+		  if [[ "$command" != "$item" ]] && [[ "$CL" = "2" && "$item" != " " ]]; then
+			  COMPREPLY+=($(compgen -W $command -- ${cur}))
+			fi
+	  fi
+	done
+}
+
 _encpass()
 {
 	COMPREPLY=()
@@ -65,10 +78,13 @@ _encpass()
 			extension)
 				_encpass_complete_extension_cmd
 				;;
+			dir)
+				_encpass_complete_dir_cmd
+				;;
 		esac
 	else
 		COMPREPLY+=($(compgen -W "${commands}" -- ${cur}))
 	fi
 }
 
-complete -o filenames -F _encpass encpass encpass.sh
+complete -o filenames -F _encpass encpass encpass.sh ep
