@@ -417,12 +417,12 @@ $ENCPASS_HELP_REKEY_CMD_DESC
 $ENCPASS_HELP_DIR_CMD_DESC
 .RE
 
-\fBexport\fR [-k] [-p [password] ] [\fIbucket\fR] [\fIsecret\fR]
+\fBexport\fR [-k] [-p [password]] [\fIbucket\fR] [\fIsecret\fR]
 .RS
 $ENCPASS_HELP_EXPORT_CMD_DESC
 .RE
 
-\fBimport\fR [-f] [-o] [-p [password] ] \fIfile\fR
+\fBimport\fR [-f] [-o] [-p [password]] \fIfile\fR
 .RS
 $ENCPASS_HELP_IMPORT_CMD_DESC
 .RE
@@ -569,31 +569,41 @@ encpass_cmd_show() {
 
 	[ -z "$1" ] && ENCPASS_SHOW_DIR="*" || ENCPASS_SHOW_DIR=$1
 
-	if [ ! -z "$2" ]; then
-		# Allow globbing
-		# shellcheck disable=SC2027,SC2086
-		if [ -f "$(encpass_get_abs_filename "$ENCPASS_HOME_DIR/secrets/$ENCPASS_SHOW_DIR/"$2".enc")" ]; then
-			encpass_show_secret "$ENCPASS_SHOW_DIR" "$2"
-		fi
-	else
-		# Allow globbing
-		# shellcheck disable=SC2027,SC2086
-		ENCPASS_SHOW_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$ENCPASS_SHOW_DIR"" 2>/dev/null)"
+	# Allow globbing
+	# shellcheck disable=SC2027,SC2086
+	ENCPASS_SHOW_BKT_LIST="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$ENCPASS_SHOW_DIR"" 2>/dev/null)"
+	if [ ! -z "$ENCPASS_SHOW_BKT_LIST" ]; then
+		for ENCPASS_SHOW_B in $ENCPASS_SHOW_BKT_LIST; do
 
-		if [ -z "$ENCPASS_SHOW_LIST" ]; then
-			if [ "$ENCPASS_SHOW_DIR" = "*" ]; then
-				encpass_die "Error: No buckets exist."
+			ENCPASS_BUCKET="$(basename "$ENCPASS_SHOW_B")"
+			if [ ! -z "$2" ]; then
+				# Showing secrets for a specified bucket
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
+				ENCPASS_SHOW_LIST="$(ls -1p "$ENCPASS_SHOW_B/"$2".enc" 2>/dev/null)"
+
+				if [ -z "$ENCPASS_SHOW_LIST" ]; then
+					encpass_die "Error: No secrets found for $2 in bucket $ENCPASS_BUCKET."
+				fi
+
+				for ENCPASS_SHOW_F in $ENCPASS_SHOW_LIST; do
+          ENCPASS_SECRET="$(basename "$ENCPASS_SHOW_F" .enc)"
+					encpass_show_secret "$ENCPASS_BUCKET" "$ENCPASS_SECRET"
+				done
 			else
-				encpass_die "Error: Bucket $1 does not exist."
+				ENCPASS_SHOW_DIR="$(basename "$ENCPASS_SHOW_B")"
+				echo "$ENCPASS_SHOW_DIR:"
+				encpass_show_secret "$ENCPASS_SHOW_DIR"
+				echo " "
 			fi
-		fi
 
-		for ENCPASS_SHOW_F in $ENCPASS_SHOW_LIST; do
-			ENCPASS_SHOW_DIR="$(basename "$ENCPASS_SHOW_F")"
-			echo "$ENCPASS_SHOW_DIR:"
-			encpass_show_secret "$ENCPASS_SHOW_DIR"
-			echo " "
 		done
+	else
+		if [ "$ENCPASS_SHOW_DIR" = "*" ]; then
+			encpass_die "Error: No buckets exist."
+		else
+			encpass_die "Error: Bucket $1 does not exist."
+		fi
 	fi
 }
 
@@ -851,7 +861,7 @@ encpass_cmd_export() {
 		read -r ENCPASS_KEY_PASS
 		printf "\nConfirm Password:" >&2
 		read -r ENCPASS_CKEY_PASS
-		printf "\n"
+		printf "\n\n"
 		stty echo
 
 		[ -z "$ENCPASS_KEY_PASS" ] && encpass_die "Error: You must supply a password value."
@@ -865,19 +875,30 @@ encpass_cmd_export() {
 	ENCPASS_EXPORT_FILENAME="encpass-$ENCPASS_EXPORT_TYPE-$(date '+%Y-%m-%d-%s').tgz"
 	[ ! -z "$ENCPASS_EXPORT_PASSWORD" ] && ENCPASS_EXPORT_FILENAME="$ENCPASS_EXPORT_FILENAME.enc"
 
+	cd "$ENCPASS_HOME_DIR" || encpass_die "Could not change to $ENCPASS_HOME_DIR directory"
+
 	if [ ! -z "$2" ]; then
 		# Allow globbing
 		# shellcheck disable=SC2027,SC2086
-		if [ ! -f "$ENCPASS_HOME_DIR/secrets/$ENCPASS_EXPORT_DIR/"$2".enc" ]; then
-			encpass_die "Secret $2 does not exist for bucket $ENCPASS_EXPORT_DIR"
+		ENCPASS_EXPORT_SECRET_LIST="$(ls -p "secrets/"$ENCPASS_EXPORT_DIR"/"$2".enc" 2>/dev/null)"
+
+		if [ -z "$ENCPASS_EXPORT_SECRET_LIST" ]; then
+			encpass_die "Error: No secrets found for $2 in bucket $1."
 		fi
 
 		if [ ! -z "$ENCPASS_EXPORT_OPT_KEYS" ]; then
-		  echo "Exporting keys and secret $2 for bucket $1.."
-			ENCPASS_EXPORT_PATHS="secrets/$ENCPASS_EXPORT_DIR/$2.enc keys/$ENCPASS_EXPORT_DIR"
+			echo "Exporting the following keys and secret(s) for bucket $1:"
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			printf "%s\n" "keys/"$1""
+			printf "%s\n" "$ENCPASS_EXPORT_SECRET_LIST"
+			echo ""
+			ENCPASS_EXPORT_PATHS="$ENCPASS_EXPORT_SECRET_LIST keys/$1"
 		else
-		  echo "Exporting secret $2 for bucket $1.."
-			ENCPASS_EXPORT_PATHS="secrets/$ENCPASS_EXPORT_DIR/$2.enc"
+			echo "Exporting the following secret(s) for bucket $1:"
+			echo "$ENCPASS_EXPORT_SECRET_LIST"
+			echo ""
+			ENCPASS_EXPORT_PATHS="$ENCPASS_EXPORT_SECRET_LIST"
 		fi
 
 		if [ ! -z "$ENCPASS_EXPORT_PASSWORD" ]; then
@@ -906,13 +927,33 @@ encpass_cmd_export() {
 			fi
 		fi
 
-		cd "$ENCPASS_HOME_DIR" || encpass_die "Could not change to $ENCPASS_HOME_DIR directory"
-
 		if [ ! -z "$ENCPASS_EXPORT_OPT_KEYS" ]; then
-		  echo "Exporting all keys and secret for bucket $ENCPASS_EXPORT_DIR ..."
+			if [ "$ENCPASS_EXPORT_DIR" = "*" ]; then
+				echo "Exporting all keys and secrets for ALL buckets"
+			else
+				echo "Exporting all keys and secrets for bucket $ENCPASS_EXPORT_DIR"
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
+				printf "%s\n" "keys/"$ENCPASS_EXPORT_DIR""
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
+				printf "%s\n" "secrets/"$ENCPASS_EXPORT_DIR"/"*""
+			fi
+			echo ""
 			ENCPASS_EXPORT_PATHS="secrets/$1 keys/$1"
 		else
-		  echo "Exporting all secrets for bucket $ENCPASS_EXPORT_DIR ..."
+			if [ "$ENCPASS_EXPORT_DIR" = "*" ]; then
+				echo "Exporting all secrets for ALL buckets"
+			else
+				echo "Exporting all secrets for bucket $ENCPASS_EXPORT_DIR"
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
+				printf "%s\n" "keys/"$ENCPASS_EXPORT_DIR""
+				# Allow globbing
+				# shellcheck disable=SC2027,SC2086
+				printf "%s\n" "secrets/"$ENCPASS_EXPORT_DIR"/"*""
+			fi
+			echo ""
 			ENCPASS_EXPORT_PATHS="secrets/$1"
 		fi
 
