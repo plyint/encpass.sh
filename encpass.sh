@@ -54,7 +54,7 @@ encpass_checks() {
 
 		[ ! -d "$ENCPASS_HOME_DIR/keys" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/keys"
 		[ ! -d "$ENCPASS_HOME_DIR/secrets" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
-		[ ! -d "$ENCPASS_HOME_DIR/export" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/export"
+		[ ! -d "$ENCPASS_HOME_DIR/exports" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/exports"
 
 	fi
 
@@ -290,13 +290,21 @@ encpass_help() {
 	ENCPASS_HELP_LOCK_CMD_DESC="Locks all keys used by encpass.sh using a password.  The user will be prompted to enter a password and confirm it.  A user should take care to securely store the password.  If the password is lost then keys can not be unlocked.  When keys are locked, secrets can not be retrieved. (e.g. the output of the values in the \"show\" command will be displayed as \"**Locked**\")"
 	ENCPASS_HELP_UNLOCK_CMD_DESC="Unlocks all the keys for encpass.sh.  The user will be prompted to enter the password and confirm it."
 	ENCPASS_HELP_REKEY_CMD_DESC="Replaces the key of the specified \fIbucket\fR and then re-encrypts all secrets for the bucket using the new key."
-	ENCPASS_HELP_EXPORT_CMD_DESC="Export the encrypted secret(s) for the specified \fIbucket\fR to a gzip compressed archive file (tar.gz)."
-	ENCPASS_HELP_IMPORT_CMD_DESC="Import the encrypted secret(s) from a gzip compressed archive file (tar.gz)."
+	ENCPASS_HELP_EXPORT_CMD_DESC="Export the encrypted secret(s) for the specified \fIbucket\fR to a gzip compressed archive file (.tgz).  The exported file will be placed in the \fIENCPASS_HOME_DIR\fR/exports folder.  If a \fIsecret\fR is specified, only the specific \fIsecret\fR for the \fIbucket\fR will be exported.  If no, \fIbucket\fR is specified all secrets will be exported. If \fI-p\fR is specified, the exported file will be encrypted with a password and exported with a \".tgz.enc\" extension.  The encrypted password can be passed as an argument to the \fI-p\fR option or if no argument is given, then the user will be prompted to enter a password.  The encryption cipher used by default is aes-256-cbc, salted, with the pseudorandom function pbkdf2 at 10,000 iterations.
+
+	
+
+By default, the export command will only export the encrypted secrets in the \fIbucket\fR specified.  If you wish to export the keys as well you must pass the \fI-k\fR option.  When the \fI-k\fR option is specified a password will be required to be entered regardless of whether the \fI-p\fR option was specified or not, in order to protect the keys being exported."
+ENCPASS_HELP_IMPORT_CMD_DESC="Import the encrypted secret(s) from a gzip compressed tar archive file (.tgz).  Importation from an encrypted archive file (.tgz.enc) is also supported. If encrypted, the format is assumed to be the same as what the export command uses. (i.e. aes-256-cbc, salted, with pbkdf2 at 10,000 iterations) To import and encrypted archive file you will need to pass the \fI-p\fR option, which can accept an optional argument for the the password.  If no password is provided, when the \fI-p\fR option is specified, then the user will be prompted to enter one.
+
+
+
+By default, the import command will display the \fIENCPASS_HOME_DIR\fR location the secrets/keys will be imported to and prompt the user to confirm whether to proceed.  To prevent the prompt from appearing the \fI-f\fR option can be specified.  When secrets/keys are imported, if a secret/key exists with the same name it will not be overridden and the remaining secrets/keys will be imported.  This behavior can be changed to overwrite secrets/keys on import if they exist by passing the \fI-o\fR option."
 	ENCPASS_HELP_EXTENSION_CMD_DESC="Enables/disables an extension for encpass.sh.  Only one extension can be enabled for one ENCPASS_HOME_DIR to ensure there are no unexpected side effects with multiple extensions enabled at once.  An extension must be named \"encpass-\fIextension\fR\.sh\" and placed in the directory \"./extensions/\fIextension\fR/\" relative to the \"encpass.sh\" script or be available in \$PATH. 
 
 
 \fIaction\fR must be set to either \"enable\" (enables an extension), \"disable\" (disables the current extension), or \"list\" (displays the available extensions).  If \fIaction\fR is set to \"enable\" then the name of the extension must be passed as an additional parameter. If no \fIaction\fR is specified then the currently enabled extension is displayed." 
-	ENCPASS_HELP_DIR_CMD_DESC="Prints out the current directory that ENCPASS_HOME_DIR is set to."
+	ENCPASS_HELP_DIR_CMD_DESC="Prints out the current directory that ENCPASS_HOME_DIR is set to.  If the optional subcommand \"ls\" is passed, the ENCPASS_DIR_LIST environment variable will be parsed as a colon delimited list of directories and displayed on stdout."
 
 	# Load extension description and additional commands if they exist
 	if [ ! -z "$ENCPASS_EXTENSION" ]; then
@@ -404,17 +412,17 @@ $ENCPASS_HELP_UNLOCK_CMD_DESC
 $ENCPASS_HELP_REKEY_CMD_DESC
 .RE
 
-\fBdir\fR
+\fBdir\fR [ls]
 .RS
 $ENCPASS_HELP_DIR_CMD_DESC
 .RE
 
-\fBexport\fR [\fIbucket\fR] [\fIsecret\fR]
+\fBexport\fR [-k] [-p [password] ] [\fIbucket\fR] [\fIsecret\fR]
 .RS
 $ENCPASS_HELP_EXPORT_CMD_DESC
 .RE
 
-\fBimport\fR \fIfile\fR
+\fBimport\fR [-f] [-o] [-p [password] ] \fIfile\fR
 .RS
 $ENCPASS_HELP_IMPORT_CMD_DESC
 .RE
@@ -754,7 +762,17 @@ encpass_cmd_unlock() {
 
 encpass_cmd_dir() {
 	encpass_ext_func "cmd_dir" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
-	echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
+
+	if [ ! -z "$1" ]; then
+		if [ "$1" = "ls" ]; then
+			echo "$ENCPASS_DIR_LIST" | awk '{split($1,DIRS,/:/); for ( D in DIRS ) {printf "%s\n", DIRS[D];} }'
+		else
+			echo "Error: $1 is not a valid command."
+		fi
+
+	else
+  	echo "ENCPASS_HOME_DIR=$ENCPASS_HOME_DIR"
+	fi
 }
 
 encpass_cmd_rekey() {
@@ -797,18 +815,83 @@ encpass_cmd_rekey() {
 encpass_cmd_export() {
 	encpass_ext_func "cmd_export" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
+	while getopts ":kp" ENCPASS_OPTS; do
+		case "$ENCPASS_OPTS" in
+			k )	ENCPASS_EXPORT_OPT_KEYS=1
+		      shift $((OPTIND-1));;
+			p )	# Lookahead at next option to support
+				  # optional argument to password option.
+					eval nextopt="\${$OPTIND}"
+					# nextopt is assigned by eval function
+					# Allow globbing
+					# shellcheck disable=SC2154,SC2086,SC2027
+					ENCPASS_BUCKET_DIR="$(ls -1d "$ENCPASS_HOME_DIR/secrets/"$nextopt"" 2>/dev/null)"
+				  if [ ! -z "$ENCPASS_BUCKET_DIR" ]; then
+						ENCPASS_EXPORT_OPT_PASS=1
+				  elif [ "$nextopt" = "-k" ]; then
+						ENCPASS_EXPORT_OPT_PASS=1
+					else
+						ENCPASS_EXPORT_OPT_PASS=1
+						ENCPASS_EXPORT_PASSWORD="$nextopt"
+						shift $((OPTIND-1))
+					fi
+				  shift $((OPTIND-1))
+					;;
+		esac
+	done
+
+	if [ -n "$ENCPASS_EXPORT_OPT_KEYS" ] && [ ! -n "$ENCPASS_EXPORT_OPT_PASS" ]; then 
+		echo "Exporting keys requires a password to be set for the export file."
+    ENCPASS_EXPORT_OPT_PASS=1
+	fi
+
+	if [ -n "$ENCPASS_EXPORT_OPT_PASS" ] && [ -z "$ENCPASS_EXPORT_PASSWORD" ]; then 
+		printf "\nEnter Password for export file:" >&2
+		stty -echo
+		read -r ENCPASS_KEY_PASS
+		printf "\nConfirm Password:" >&2
+		read -r ENCPASS_CKEY_PASS
+		printf "\n"
+		stty echo
+
+		[ -z "$ENCPASS_KEY_PASS" ] && encpass_die "Error: You must supply a password value."
+		[ "$ENCPASS_KEY_PASS" != "$ENCPASS_CKEY_PASS" ] && encpass_die "Error: password values do not match"
+		ENCPASS_EXPORT_PASSWORD="$ENCPASS_KEY_PASS"
+	fi
+
 	[ -z "$1" ] && ENCPASS_EXPORT_DIR="*" || ENCPASS_EXPORT_DIR=$1
 
 	[ -z "$ENCPASS_EXTENSION" ] && ENCPASS_EXPORT_TYPE="openssl" || ENCPASS_EXPORT_TYPE="$ENCPASS_EXTENSION"
-  ENCPASS_EXPORT_FILENAME="encpass-$ENCPASS_EXPORT_TYPE-$(date '+%Y-%m-%d-%s').tar.gz"
+	ENCPASS_EXPORT_FILENAME="encpass-$ENCPASS_EXPORT_TYPE-$(date '+%Y-%m-%d-%s').tgz"
+	[ ! -z "$ENCPASS_EXPORT_PASSWORD" ] && ENCPASS_EXPORT_FILENAME="$ENCPASS_EXPORT_FILENAME.enc"
+
 	if [ ! -z "$2" ]; then
-		if [ ! -f "$ENCPASS_HOME_DIR/secrets/$ENCPASS_EXPORT_DIR/$2.enc" ]; then
+		# Allow globbing
+		# shellcheck disable=SC2027,SC2086
+		if [ ! -f "$ENCPASS_HOME_DIR/secrets/$ENCPASS_EXPORT_DIR/"$2".enc" ]; then
 			encpass_die "Secret $2 does not exist for bucket $ENCPASS_EXPORT_DIR"
 		fi
-		echo "Exporting secret $2 for bucket $1.."
-		tar -C "$ENCPASS_HOME_DIR" -czf "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" "secrets/$ENCPASS_EXPORT_DIR/$2.enc"
-		if [ -f "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" ]; then
-			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/export"
+
+		if [ ! -z "$ENCPASS_EXPORT_OPT_KEYS" ]; then
+		  echo "Exporting keys and secret $2 for bucket $1.."
+			ENCPASS_EXPORT_PATHS="secrets/$ENCPASS_EXPORT_DIR/$2.enc keys/$ENCPASS_EXPORT_DIR"
+		else
+		  echo "Exporting secret $2 for bucket $1.."
+			ENCPASS_EXPORT_PATHS="secrets/$ENCPASS_EXPORT_DIR/$2.enc"
+		fi
+
+		if [ ! -z "$ENCPASS_EXPORT_PASSWORD" ]; then
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			tar -C "$ENCPASS_HOME_DIR" -czO $ENCPASS_EXPORT_PATHS | openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -out "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" -k "$ENCPASS_EXPORT_PASSWORD" 
+		else
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			tar -C "$ENCPASS_HOME_DIR" -czf "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" $ENCPASS_EXPORT_PATHS
+		fi
+
+		if [ -f "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" ]; then
+			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/exports"
 		fi
 	else
 		# Allow globbing
@@ -819,39 +902,114 @@ encpass_cmd_export() {
 			if [ "$ENCPASS_EXPORT_DIR" = "*" ]; then
 				encpass_die "Error: No buckets exist."
 			else
-				encpass_die "Error: Bucket $1 does not exist."
+				encpass_die "Error: Bucket $ENCPASS_EXPORT_DIR does not exist."
 			fi
 		fi
 
-		echo "Exporting all secrets for bucket $1"
 		cd "$ENCPASS_HOME_DIR" || encpass_die "Could not change to $ENCPASS_HOME_DIR directory"
-		# Allow globbing
-		# shellcheck disable=SC2027,SC2086
-		tar -C "$ENCPASS_HOME_DIR" -czf "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" --exclude="[.]*" secrets/$ENCPASS_EXPORT_DIR
-		if [ -f "$ENCPASS_HOME_DIR/export/$ENCPASS_EXPORT_FILENAME" ]; then
-			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/export"
+
+		if [ ! -z "$ENCPASS_EXPORT_OPT_KEYS" ]; then
+		  echo "Exporting all keys and secret for bucket $ENCPASS_EXPORT_DIR ..."
+			ENCPASS_EXPORT_PATHS="secrets/$1 keys/$1"
+		else
+		  echo "Exporting all secrets for bucket $ENCPASS_EXPORT_DIR ..."
+			ENCPASS_EXPORT_PATHS="secrets/$1"
+		fi
+
+		if [ ! -z "$ENCPASS_EXPORT_PASSWORD" ]; then
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			tar -C "$ENCPASS_HOME_DIR" -czO --exclude="[.]*" $ENCPASS_EXPORT_PATHS | openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -out "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" -k "$ENCPASS_EXPORT_PASSWORD" 
+		else
+			# Allow globbing
+			# shellcheck disable=SC2027,SC2086
+			tar -C "$ENCPASS_HOME_DIR" -czf "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" --exclude="[.]*" $ENCPASS_EXPORT_PATHS
+		fi
+
+		if [ -f "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" ]; then
+			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/exports"
 		fi
 	fi
 }
 
 encpass_cmd_import() {
 	encpass_ext_func "cmd_import" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
+	ENCPASS_IMPORT_TAR_OPTIONS="-k"
+
+	while getopts ":fop" ENCPASS_OPTS; do
+		case "$ENCPASS_OPTS" in
+			f )	ENCPASS_IMPORT_OPT_FORCE=1
+		      shift $((OPTIND-1));;
+			o )	ENCPASS_IMPORT_OPT_OVERWRITE=1
+					ENCPASS_IMPORT_TAR_OPTIONS=""
+		      shift $((OPTIND-1));;
+			p )	# Lookahead at next option to support
+				  # optional argument to password option.
+					eval nextopt="\${$OPTIND}"
+					# nextopt is assigned by eval function
+					# shellcheck disable=SC2154
+				  if [ -f "$nextopt" ]; then
+						ENCPASS_IMPORT_OPT_PASS=1
+				  elif [ "$nextopt" = "-o" ] || [ "$nextopt" = "-f" ]; then
+						ENCPASS_IMPORT_OPT_PASS=1
+					else
+						ENCPASS_IMPORT_OPT_PASS=1
+						ENCPASS_IMPORT_PASSWORD="$nextopt"
+						shift $((OPTIND-1))
+					fi
+				  shift $((OPTIND-1))
+					;;
+		esac
+	done
 
 	[ -z "$1" ] && encpass_die "You must specify a filename to import."
 
-	if [ -f "$1" ]; then
-		printf "%s" "You are about to import secrets from file $1 into directory $ENCPASS_HOME_DIR/secrets/."
-		printf "%s" "Importation will overwrite any existing secrets that have the same name.\n"
-		printf "%s" "Are you sure you want to proceed with the import? [y/N]"
+  echo "Import file: $1"
+	echo "To directory: $ENCPASS_HOME_DIR"
 
-		ENCPASS_CONFIRM="$(encpass_getche)"
+	if [ -n "$ENCPASS_IMPORT_OPT_PASS" ] && [ -z "$ENCPASS_IMPORT_PASSWORD" ]; then 
+		printf "\nEnter Password for import file:" >&2
+		stty -echo
+		read -r ENCPASS_KEY_PASS
+		printf "\nConfirm Password:" >&2
+		read -r ENCPASS_CKEY_PASS
 		printf "\n"
-		if [ "$ENCPASS_CONFIRM" != "Y" ] && [ "$ENCPASS_CONFIRM" != "y" ]; then
-			exit 0
+		stty echo
+
+		[ -z "$ENCPASS_KEY_PASS" ] && encpass_die "Error: You must supply a password value."
+		[ "$ENCPASS_KEY_PASS" != "$ENCPASS_CKEY_PASS" ] && encpass_die "Error: password values do not match"
+		ENCPASS_IMPORT_PASSWORD="$ENCPASS_KEY_PASS"
+	fi
+
+	if [ -f "$1" ]; then
+
+		if [ ! -n "$ENCPASS_IMPORT_OPT_FORCE" ]; then
+			[ -n "$ENCPASS_IMPORT_OPT_OVERWRITE" ] && printf "\n%s" "WARNING: Overwrite flag is set. Importation will overwrite any existing secrets/keys that have the same name."
+			printf "\n%s" "Are you sure you want to proceed with the import? [y/N]"
+
+			ENCPASS_CONFIRM="$(encpass_getche)"
+			printf "\n"
+			if [ "$ENCPASS_CONFIRM" != "Y" ] && [ "$ENCPASS_CONFIRM" != "y" ]; then
+				exit 0
+			fi
 		fi
 
-		echo "Importing secrets from file $1.."
-		tar -C "$ENCPASS_HOME_DIR" -xzf "$1" "secrets/"
+		if [ ! -z "$ENCPASS_IMPORT_PASSWORD" ]; then
+			# Ignore globbing, just the overwrite variable
+			# shellcheck disable=SC2027,SC2086
+			openssl enc -aes-256-cbc -d -pbkdf2 -iter 10000 -salt \
+				-in "$1" -k "$ENCPASS_IMPORT_PASSWORD" \
+				| tar $ENCPASS_IMPORT_TAR_OPTIONS -C "$ENCPASS_HOME_DIR" -xzf - \
+				|| encpass_die "Error: Some values could not be imported"
+		else
+			# Ignore globbing, just the overwrite variable
+			# shellcheck disable=SC2027,SC2086
+    	tar $ENCPASS_IMPORT_TAR_OPTIONS -C "$ENCPASS_HOME_DIR" -xzf "$1" \
+				|| encpass_die "Error: Some values could not be imported"
+
+		fi
+		echo "Import successful."
+
 	else
 		encpass_die "Error: Import file $1 does not exist."
 	fi
