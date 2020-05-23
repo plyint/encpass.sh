@@ -12,7 +12,7 @@
 
 encpass_keybase_checks() {
 	[ ! -d "$ENCPASS_HOME_DIR/secrets" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/secrets"
-	[ ! -d "$ENCPASS_HOME_DIR/export" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/export"
+	[ ! -d "$ENCPASS_HOME_DIR/exports" ] && mkdir -m 700 "$ENCPASS_HOME_DIR/exports"
 }
 
 encpass_keybase_include_init() {
@@ -103,6 +103,14 @@ encpass_keybase_cmd_rekey() {
 	encpass_die "The rekey command is not available.  Keys will be rotated automatically by the Keybase client using CLKR (https://keybase.io/docs/teams/clkr)."
 }
 
+encpass_keybase_cmd_import() {
+	encpass_die "The import command is not supported for the Keybase extension.  Transfer secrets into encpass from a Keybase encrypted repo using the clone-repo command."
+}
+
+encpass_keybase_cmd_export() {
+	encpass_die "The export command is not supported for the Keybase extension.  Store secrets in a Keybase encrypted repo using the store command."
+}
+
 encpass_keybase_help_extension() {
 # Ignore unused warning. This script is used when the main script sources it.
 # shellcheck disable=SC2034
@@ -124,6 +132,10 @@ ENCPASS_HELP_LOCK_CMD_DESC="The lock command is not available.  Locking of keys 
 ENCPASS_HELP_UNLOCK_CMD_DESC="The unlock command is not available.  Locking of keys is performed automatically by the Keybase client when the user signs in."
 # shellcheck disable=SC2034
 ENCPASS_HELP_REKEY_CMD_DESC="The rekey command is not available.  Keys will be rotated automatically by the Keybase client using CLKR (https://keybase.io/docs/teams/clkr)."
+# shellcheck disable=SC2034
+ENCPASS_HELP_IMPORT_CMD_DESC="The import command is not supported for the Keybase extension.  Transfer secrets into encpass from a Keybase encrypted repo using the clone-repo command."
+# shellcheck disable=SC2034
+ENCPASS_HELP_EXPORT_CMD_DESC="The export command is not supported for the Keybase extension.  Store secrets in a Keybase encrypted repo using the store command."
 
 # Ignore unused warning. This script is used when the main script sources it.
 # shellcheck disable=SC2034
