@@ -160,7 +160,7 @@ ehd() { export ENCPASS_HOME_DIR="$1"; [ -f "$1/completion" ] && . "$1/completion
 ehd $ENCPASS_HOME_DIR
 ```
 
-This sets up our alias, exports our environment variables, adds our change directory function and calls the function to enable command completion.
+This sets up our alias, exports our environment variables, adds our encpass directory function and calls the function to enable command completion.
 
 
 ## Backing up secrets/keys
