@@ -103,7 +103,7 @@ ENCPASS_HOME_DIR=/keybase/private/<USER>/.encpass
 
 ### Maintain a list of encpass home directories using ENCPASS_DIR_LIST
 
-A colon delimited list of directories can be specified in the environment variable ENCPASS_DIR_LIST.  This provides a useful way of tracking multiple encpass home directories.kk
+A colon delimited list of directories can be specified in the environment variable ENCPASS_DIR_LIST.  This provides a useful way of tracking multiple encpass home directories.
 ```
 export ENCPASS_DIR_LIST="/home/<USER>/.encpass:/keybase/private/<USER>/.encpass"
 ```
