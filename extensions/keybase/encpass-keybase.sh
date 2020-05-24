@@ -84,7 +84,7 @@ corresponding Keybase remote repo.
 		  echo "$ENCPASS_SECRET_INPUT" | keybase encrypt "$ENCPASS_KEYBASE_OWNER" --no-device-keys --no-paper-keys > "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc" 2>/dev/null
 	  else
 			# encrypting for the team that owns this repo
-		  echo "$ENCPASS_SECRET_INPUT" | keybase encrypt --team "$ENCPASS_KEYBASE_OWNER" --no-device-keys --no-paper-keys > "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc" 2>/dev/null
+		  echo "$ENCPASS_SECRET_INPUT" | keybase encrypt --team "$ENCPASS_KEYBASE_OWNER" > "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc" 2>/dev/null
 		fi
 	else
 		encpass_die "Error: secrets do not match.  Please try again."
