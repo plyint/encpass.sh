@@ -125,7 +125,8 @@ Note, all these examples are using Bash syntax, but other shells should have sim
 
 
 **Add command line completion to your shell. (Currently only bash command completion exists)**
-Copy the [completion](completion/bash/completion) to your ENCPASS_HOME_DIR and source the file
+
+Copy the [completion](completion/bash/completion) script to your ENCPASS_HOME_DIR and source the file
 ```
 source $ENCPASS_HOME_DIR/completion
 ```
