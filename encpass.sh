@@ -1136,7 +1136,7 @@ encpass_cmd_extension() {
 encpass_cmd_lite() {
 	encpass_ext_func "cmd_lite" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
-	head -n$(awk '/\#LITE/{print NR;exit}' $0) $0
+	head -n"$(awk '/\#LITE/{print NR;exit}' "$0")" "$0"
 }
 
 if [ "$(basename "$0")" = "encpass.sh" ]; then
