@@ -24,7 +24,7 @@ encpass_checks() {
 	[ -n "$ENCPASS_CHECKS" ] && return
 
 	if [ -z "$ENCPASS_HOME_DIR" ]; then
-		ENCPASS_HOME_DIR="$(encpass_get_abs_filename ~)/.encpass"
+		ENCPASS_HOME_DIR="$HOME/.encpass"
 	fi
 	[ ! -d "$ENCPASS_HOME_DIR" ] && mkdir -m 700 "$ENCPASS_HOME_DIR"
 
@@ -112,6 +112,18 @@ encpass_get_secret_abs_name() {
 	fi
 }
 
+encpass_rmfifo() {
+	trap - EXIT
+	kill "$1" 2>/dev/null
+	rm -f "$2"
+}
+
+encpass_mkfifo() {
+	fifo="$ENCPASS_HOME_DIR/$1.$$"
+	mkfifo -m 600 "$fifo" || encpass_die "Error: unable to create named pipe"
+	printf '%s\n' "$fifo"
+}
+
 get_secret() {
 	encpass_checks
 	encpass_ext_func "get_secret" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
@@ -137,6 +149,9 @@ set_secret() {
 		stty -echo
 		read -r ENCPASS_CSECRET_INPUT
 		stty echo
+
+		# Use named pipe to securely pass secret to openssl
+		fifo="$(encpass_mkfifo set_secret_fifo)"
 	fi
 
 	if [ "$ENCPASS_SECRET_INPUT" = "$ENCPASS_CSECRET_INPUT" ]; then
@@ -145,28 +160,21 @@ set_secret() {
 
 		[ ! -d "$ENCPASS_SECRET_DIR" ] && mkdir -m 700 "$ENCPASS_SECRET_DIR"
 
-		printf "%s" "$(openssl rand -hex 16)" >"$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc"
-
+		# Generate IV and create secret file
+		printf "%s" "$(openssl rand -hex 16)" > "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc"
 		ENCPASS_OPENSSL_IV="$(cat "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc")"
 
-		echo "$ENCPASS_SECRET_INPUT" | openssl enc -aes-256-cbc -e -a -iv \
-			"$ENCPASS_OPENSSL_IV" -K \
-			"$(cat "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.key")" 1>> \
-					"$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc"
+		echo "$ENCPASS_SECRET_INPUT" > "$fifo" &
+		# Allow expansion now so PID is set
+		# shellcheck disable=SC2064
+		trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
+
+		# Append encrypted secret to IV in the secret file
+		openssl enc -aes-256-cbc -e -a -iv "$ENCPASS_OPENSSL_IV" \
+			-K "$(cat "$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.key")" \
+			-in "$fifo" 1>> "$ENCPASS_SECRET_DIR/$ENCPASS_SECRET_NAME.enc"
 	else
 		encpass_die "Error: secrets do not match.  Please try again."
-	fi
-}
-
-encpass_get_abs_filename() {
-	# $1 : relative filename
-	filename="$1"
-	parentdir="$(dirname "${filename}")"
-
-	if [ -d "${filename}" ]; then
-		cd "${filename}" && pwd
-	elif [ -d "${parentdir}" ]; then
-		echo "$(cd "${parentdir}" && pwd)/$(basename "${filename}")"
 	fi
 }
 
@@ -683,6 +691,11 @@ encpass_cmd_lock() {
 	if [ "$ENCPASS_KEY_PASS" = "$ENCPASS_CKEY_PASS" ]; then
 		ENCPASS_NUM_KEYS_LOCKED=0
 		ENCPASS_KEYS_LIST="$(ls -1d "$ENCPASS_HOME_DIR/keys/"*"/" 2>/dev/null)"
+
+		# Create named pipe to pass secret to openssl outside for loop, 
+		# so it can be reused for multiple calls 
+		fifo="$(encpass_mkfifo cmd_lock_fifo)"
+		
 		for ENCPASS_KEY_F in $ENCPASS_KEYS_LIST; do
 
 			if [ -d "${ENCPASS_KEY_F%:}" ]; then
@@ -702,7 +715,12 @@ encpass_cmd_lock() {
 					encpass_die "Error: Private key file ${ENCPASS_KEY_F}private.key missing for bucket $ENCPASS_KEY_NAME."
 				fi
 				if [ ! -z "$ENCPASS_KEY_VALUE" ]; then
-					openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -in "$ENCPASS_KEY_F/private.key" -out "$ENCPASS_KEY_F/private.lock" -k "$ENCPASS_KEY_PASS"
+					# Use named pipe to securely pass secret to openssl
+					echo "$ENCPASS_KEY_PASS" > "$fifo" &
+					# Allow expansion now so PID is set
+					# shellcheck disable=SC2064
+					trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
+					openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -in "$ENCPASS_KEY_F/private.key" -out "$ENCPASS_KEY_F/private.lock" -pass file:"$fifo"
 					if [ -f "$ENCPASS_KEY_F/private.key" ] && [ -f "$ENCPASS_KEY_F/private.lock" ]; then
 						# Both the key and lock file exist.  We can remove the key file now
 						rm -f "$ENCPASS_KEY_F/private.key"
@@ -735,6 +753,10 @@ encpass_cmd_unlock() {
 	if [ ! -z "$ENCPASS_KEY_PASS" ]; then
 		ENCPASS_NUM_KEYS_UNLOCKED=0
 		ENCPASS_KEYS_LIST="$(ls -1d "$ENCPASS_HOME_DIR/keys/"*"/" 2>/dev/null)"
+
+		# Create named pipe to pass secret to openssl outside for loop, 
+		# so it can be reused for multiple calls 
+		fifo="$(encpass_mkfifo cmd_unlock_fifo)"
 		for ENCPASS_KEY_F in $ENCPASS_KEYS_LIST; do
 			if [ -d "${ENCPASS_KEY_F%:}" ]; then
 				ENCPASS_KEY_NAME="$(basename "$ENCPASS_KEY_F")"
@@ -747,10 +769,16 @@ encpass_cmd_unlock() {
 					# Remove the failed file in case previous decryption attempts were unsuccessful
 					rm -f "$ENCPASS_KEY_F/failed" 2>/dev/null
 
+					# Use named pipe to securely pass secret to openssl
+					echo "$ENCPASS_KEY_PASS" > "$fifo" &
+					# Allow expansion now so PID is set
+					# shellcheck disable=SC2064
+					trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
+
 					# Decrypt key. Log any failure to the "failed" file.
 					openssl enc -aes-256-cbc -d -pbkdf2 -iter 10000 -salt \
 						-in "$ENCPASS_KEY_F/private.lock" -out "$ENCPASS_KEY_F/private.key" \
-						-k "$ENCPASS_KEY_PASS" 2>&1 | encpass_save_err "$ENCPASS_KEY_F/failed"
+						-pass file:"$fifo" 2>&1 | encpass_save_err "$ENCPASS_KEY_F/failed"
 
 					if [ ! -f "$ENCPASS_KEY_F/failed" ]; then
 						# No failure has occurred.
@@ -880,7 +908,17 @@ encpass_cmd_export() {
 
 	[ -z "$ENCPASS_EXTENSION" ] && ENCPASS_EXPORT_TYPE="openssl" || ENCPASS_EXPORT_TYPE="$ENCPASS_EXTENSION"
 	ENCPASS_EXPORT_FILENAME="encpass-$ENCPASS_EXPORT_TYPE-$(date '+%Y-%m-%d-%s').tgz"
-	[ ! -z "$ENCPASS_EXPORT_PASSWORD" ] && ENCPASS_EXPORT_FILENAME="$ENCPASS_EXPORT_FILENAME.enc"
+
+	if [ ! -z "$ENCPASS_EXPORT_PASSWORD" ]; then
+		ENCPASS_EXPORT_FILENAME="$ENCPASS_EXPORT_FILENAME.enc"
+
+		# Use named pipe to securely pass secret to openssl
+		fifo="$(encpass_mkfifo cmd_export_fifo)"
+		echo "$ENCPASS_EXPORT_PASSWORD" > "$fifo" &
+		# Allow expansion now so PID is set
+		# shellcheck disable=SC2064
+		trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
+	fi
 
 	cd "$ENCPASS_HOME_DIR" || encpass_die "Could not change to $ENCPASS_HOME_DIR directory"
 
@@ -911,7 +949,7 @@ encpass_cmd_export() {
 		if [ ! -z "$ENCPASS_EXPORT_PASSWORD" ]; then
 			# Allow globbing
 			# shellcheck disable=SC2027,SC2086
-			tar -C "$ENCPASS_HOME_DIR" -czO $ENCPASS_EXPORT_PATHS | openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -out "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" -k "$ENCPASS_EXPORT_PASSWORD" 
+			tar -C "$ENCPASS_HOME_DIR" -czO $ENCPASS_EXPORT_PATHS | openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -out "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" -pass file:"$fifo"
 		else
 			# Allow globbing
 			# shellcheck disable=SC2027,SC2086
@@ -967,7 +1005,7 @@ encpass_cmd_export() {
 		if [ ! -z "$ENCPASS_EXPORT_PASSWORD" ]; then
 			# Allow globbing
 			# shellcheck disable=SC2027,SC2086
-			tar -C "$ENCPASS_HOME_DIR" -czO --exclude="[.]*" $ENCPASS_EXPORT_PATHS | openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -out "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" -k "$ENCPASS_EXPORT_PASSWORD" 
+			tar -C "$ENCPASS_HOME_DIR" -czO --exclude="[.]*" $ENCPASS_EXPORT_PATHS | openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -out "$ENCPASS_HOME_DIR/exports/$ENCPASS_EXPORT_FILENAME" -pass file:"$fifo"
 		else
 			# Allow globbing
 			# shellcheck disable=SC2027,SC2086
@@ -1043,10 +1081,17 @@ encpass_cmd_import() {
 		fi
 
 		if [ ! -z "$ENCPASS_IMPORT_PASSWORD" ]; then
+			# Use named pipe to securely pass secret to openssl
+			fifo="$(encpass_mkfifo cmd_import_fifo)"
+			echo "$ENCPASS_IMPORT_PASSWORD" > "$fifo" &
+			# Allow expansion now so PID is set
+			# shellcheck disable=SC2064
+			trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
+
 			# Ignore globbing, just the overwrite variable
 			# shellcheck disable=SC2027,SC2086
 			openssl enc -aes-256-cbc -d -pbkdf2 -iter 10000 -salt \
-				-in "$1" -k "$ENCPASS_IMPORT_PASSWORD" \
+				-in "$1" -pass file:"$fifo" \
 				| tar $ENCPASS_IMPORT_TAR_OPTIONS -C "$ENCPASS_HOME_DIR" -xzf - \
 				|| encpass_die "Error: Some values could not be imported"
 		else
