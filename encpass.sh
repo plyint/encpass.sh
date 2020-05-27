@@ -720,6 +720,7 @@ encpass_cmd_lock() {
 					# Allow expansion now so PID is set
 					# shellcheck disable=SC2064
 					trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
+					umask 0377
 					openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -salt -in "$ENCPASS_KEY_F/private.key" -out "$ENCPASS_KEY_F/private.lock" -pass file:"$fifo"
 					if [ -f "$ENCPASS_KEY_F/private.key" ] && [ -f "$ENCPASS_KEY_F/private.lock" ]; then
 						# Both the key and lock file exist.  We can remove the key file now
@@ -776,6 +777,7 @@ encpass_cmd_unlock() {
 					trap "encpass_rmfifo $! $fifo" EXIT HUP TERM INT TSTP
 
 					# Decrypt key. Log any failure to the "failed" file.
+					umask 0377
 					openssl enc -aes-256-cbc -d -pbkdf2 -iter 10000 -salt \
 						-in "$ENCPASS_KEY_F/private.lock" -out "$ENCPASS_KEY_F/private.key" \
 						-pass file:"$fifo" 2>&1 | encpass_save_err "$ENCPASS_KEY_F/failed"
