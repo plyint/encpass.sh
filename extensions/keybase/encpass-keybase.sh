@@ -34,7 +34,7 @@ encpass_keybase_include_init() {
 
 encpass_keybase_get_secret() {
 	[ "$(basename "$0")" != "encpass.sh" ] && encpass_keybase_include_init "$1" "$2"
-	encpass_get_secret_abs_name
+	encpass_set_secret_abs_name
 	encpass_keybase_decrypt_secret
 }
 

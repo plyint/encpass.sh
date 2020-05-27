@@ -96,20 +96,14 @@ encpass_generate_private_key() {
 	fi
 }
 
-encpass_get_private_key_abs_name() {
+encpass_set_private_key_abs_name() {
 	ENCPASS_PRIVATE_KEY_ABS_NAME="$ENCPASS_HOME_DIR/keys/$ENCPASS_BUCKET/private.key"
-
-	if [ "$1" != "nogenerate" ]; then 
-		[ ! -f "$ENCPASS_PRIVATE_KEY_ABS_NAME" ] && encpass_generate_private_key
-	fi
+	[ ! -n "$1" ] && [ ! -f "$ENCPASS_PRIVATE_KEY_ABS_NAME" ] && encpass_generate_private_key
 }
 
-encpass_get_secret_abs_name() {
+encpass_set_secret_abs_name() {
 	ENCPASS_SECRET_ABS_NAME="$ENCPASS_HOME_DIR/secrets/$ENCPASS_BUCKET/$ENCPASS_SECRET_NAME.enc"
-
-	if [ "$1" != "nocreate" ]; then 
-		[ ! -f "$ENCPASS_SECRET_ABS_NAME" ] && set_secret
-	fi
+	[ ! -n "$1" ] && [ ! -f "$ENCPASS_SECRET_ABS_NAME" ] && set_secret
 }
 
 encpass_rmfifo() {
@@ -130,8 +124,8 @@ get_secret() {
 
 	[ "$(basename "$0")" != "encpass.sh" ] && encpass_include_init "$1" "$2"
 
-	encpass_get_private_key_abs_name
-	encpass_get_secret_abs_name
+	encpass_set_private_key_abs_name
+	encpass_set_secret_abs_name
 	encpass_decrypt_secret "$@"
 }
 
@@ -155,7 +149,7 @@ set_secret() {
 	fi
 
 	if [ "$ENCPASS_SECRET_INPUT" = "$ENCPASS_CSECRET_INPUT" ]; then
-		encpass_get_private_key_abs_name
+		encpass_set_private_key_abs_name
 		ENCPASS_SECRET_DIR="$ENCPASS_HOME_DIR/secrets/$ENCPASS_BUCKET"
 
 		[ ! -d "$ENCPASS_SECRET_DIR" ] && mkdir -m 700 "$ENCPASS_SECRET_DIR"
@@ -224,10 +218,10 @@ encpass_show_secret() {
 	encpass_ext_func "show_secret" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
 	ENCPASS_BUCKET=$1
-	encpass_get_private_key_abs_name "nogenerate"
+	encpass_set_private_key_abs_name 0
 	if [ ! -z "$2" ]; then
 		ENCPASS_SECRET_NAME=$2
-		encpass_get_secret_abs_name "nocreate"
+		encpass_set_secret_abs_name 0
 		[ -z "$ENCPASS_SECRET_ABS_NAME" ] && encpass_die "No secret named $2 found for bucket $1."
 		encpass_decrypt_secret
 	else
@@ -235,7 +229,7 @@ encpass_show_secret() {
 		for ENCPASS_F in $ENCPASS_FILE_LIST; do
 			ENCPASS_SECRET_NAME=$(basename "$ENCPASS_F" .enc)
 			
-			encpass_get_secret_abs_name "nocreate"
+			encpass_set_secret_abs_name 0
 			[ -z "$ENCPASS_SECRET_ABS_NAME" ] && encpass_die "No secret named $ENCPASS_SECRET_NAME found for bucket $1."
 
 			echo "$ENCPASS_SECRET_NAME = $(encpass_decrypt_secret)"
