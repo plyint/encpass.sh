@@ -131,7 +131,7 @@ Copy the [completion](completion/bash/completion) script to your ENCPASS_HOME_DI
 source $ENCPASS_HOME_DIR/completion
 ```
 
-Now when you type your commands you type the first few characters and then hit \<TAB\> for the command to complete.  Bonus, this works for subcommands, buckets and secrets as well! :)
+Now when you type your commands, you can type the first few characters and then hit \<TAB\> for the command to complete.  Bonus, this works for subcommands, buckets and secrets as well!  Add the source command to your rc file or use the "encpass home directory" function (as mentioned below) to have command completion for encpass automatically loaded when your shell starts.
 
 
 **Alias encpass.sh to ep** 
