@@ -918,6 +918,7 @@ encpass_cmd_export() {
 
 	cd "$ENCPASS_HOME_DIR" || encpass_die "Could not change to $ENCPASS_HOME_DIR directory"
 
+	umask 0377
 	if [ ! -z "$2" ]; then
 		# Allow globbing
 		# shellcheck disable=SC2027,SC2086
