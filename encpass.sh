@@ -841,6 +841,10 @@ encpass_cmd_rekey() {
 				ENCPASS_SECRET_INPUT=$(get_secret "$1" "$ENCPASS_SECRET_NAME")
 				ENCPASS_CSECRET_INPUT="$ENCPASS_SECRET_INPUT"
 				ENCPASS_BUCKET="$1_NEW"
+
+				# Use named pipe to securely pass secret to openssl
+				fifo="$(encpass_mkfifo set_secret_fifo)"
+
 				set_secret "reuse"
 			fi
 		done
