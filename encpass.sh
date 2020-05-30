@@ -830,6 +830,9 @@ encpass_cmd_rekey() {
 		ENCPASS_BUCKET="$1_NEW"
 		encpass_generate_private_key
 
+		# Use named pipe to securely pass secret to openssl
+		fifo="$(encpass_mkfifo set_secret_fifo)"
+
 		# Allow globbing
 		# shellcheck disable=SC2027,SC2086
 		ENCPASS_BUCKET_LIST="$(ls -1p "$ENCPASS_HOME_DIR/secrets/"$1"" 2>/dev/null)"
@@ -841,10 +844,6 @@ encpass_cmd_rekey() {
 				ENCPASS_SECRET_INPUT=$(get_secret "$1" "$ENCPASS_SECRET_NAME")
 				ENCPASS_CSECRET_INPUT="$ENCPASS_SECRET_INPUT"
 				ENCPASS_BUCKET="$1_NEW"
-
-				# Use named pipe to securely pass secret to openssl
-				fifo="$(encpass_mkfifo set_secret_fifo)"
-
 				set_secret "reuse"
 			fi
 		done
