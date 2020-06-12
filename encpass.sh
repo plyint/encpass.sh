@@ -420,12 +420,12 @@ $ENCPASS_HELP_REKEY_CMD_DESC
 $ENCPASS_HELP_DIR_CMD_DESC
 .RE
 
-\fBexport\fR [-k] [-p [password]] [\fIbucket\fR] [\fIsecret\fR]
+\fBexport\fR [-k] [-p [\fIpassword\fR]] [\fIbucket\fR] [\fIsecret\fR]
 .RS
 $ENCPASS_HELP_EXPORT_CMD_DESC
 .RE
 
-\fBimport\fR [-f] [-o] [-p [password]] \fIfile\fR
+\fBimport\fR [-f] [-o] [-p [\fIpassword\fR]] \fIfile\fR
 .RS
 $ENCPASS_HELP_IMPORT_CMD_DESC
 .RE
