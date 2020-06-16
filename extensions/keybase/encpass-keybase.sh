@@ -124,6 +124,11 @@ EOF
 )
 }
 
+encpass_keybase_cmd_version() {
+  ENCPASS_KEYBASE_PATH="$(command -v encpass-$ENCPASS_EXTENSION.sh)"
+	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum $ENCPASS_KEYBASE_PATH)"
+}
+
 encpass_keybase_help_commands() {
 # Ignore unused warning. These variables are used when the main script sources them.
 # shellcheck disable=SC2034

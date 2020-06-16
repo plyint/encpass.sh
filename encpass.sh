@@ -20,6 +20,8 @@
 #
 ################################################################################
 
+ENCPASS_VERSION="v4.1.0"
+
 encpass_checks() {
 	[ -n "$ENCPASS_CHECKS" ] && return
 
@@ -308,6 +310,13 @@ By default, the import command will display the \fIENCPASS_HOME_DIR\fR location 
 \fIaction\fR must be set to either \"enable\" (enables an extension), \"disable\" (disables the current extension), or \"list\" (displays the available extensions).  If \fIaction\fR is set to \"enable\" then the name of the extension must be passed as an additional parameter. If no \fIaction\fR is specified then the currently enabled extension is displayed." 
 	ENCPASS_HELP_DIR_CMD_DESC="Prints out the current directory that ENCPASS_HOME_DIR is set to.  If the optional subcommand \"ls\" is passed, the ENCPASS_DIR_LIST environment variable will be parsed as a colon delimited list of directories and displayed on stdout."
 	ENCPASS_HELP_LITE_CMD_DESC="Generates a lightweight version of encpass.sh by removing the command line management code.  It does this by searching for the comment #LITE and truncates the file to that line number.  The truncated file will be output to stdout.  You can redirect the output to a new file of your choosing.  (e.g. encpass.sh lite > encpass-lite.sh)"
+	ENCPASS_HELP_VERSION_CMD_DESC="Prints out the tag version for encpass.sh and the SHA256 checksums (if sha256sum is available) for encpass.sh and any enabled extension.  The tag version corresponds to the git commit that is tagged with that same version number.  It is possible that the script on your local could contain additional changes beyond that particular tag version (e.g. you pulled it directly from the master branch), but those changes would only at most go up to just before the next tag version number.
+
+
+You can determine if your version of encpass.sh is identical to a specific commit or tag in the official repo by computing the SHA256 checksum of a particular commit of the encpass.sh script.  To find the SHA256 checksum of an encpass.sh commit or tag from the git repo, just curl the raw script to your local and pipe it into sha256sum:
+
+
+	  curl --silent https://raw.githubusercontent.com/plyint/encpass.sh/93d42340c24e62132049430dd26c26736697e440/encpass.sh | sha256sum"
 
 	# Load extension description and additional commands if they exist
 	if [ ! -z "$ENCPASS_EXTENSION" ]; then
@@ -440,6 +449,10 @@ $ENCPASS_HELP_EXTENSION_CMD_DESC
 $ENCPASS_HELP_LITE_CMD_DESC
 .RE
 
+\fBversion\fR|\fB--version\fR|\fB-version\fR|\fB-v\fR
+.RS
+$ENCPASS_HELP_VERSION_CMD_DESC
+.RE
 
 \fBhelp\fR|\fB--help\fR|\fBusage\fR|\fB--usage\fR|\fB?\fR
 .RS
@@ -1184,6 +1197,12 @@ encpass_cmd_lite() {
 	head -n"$(awk '/\#LITE/{print NR;exit}' "$0")" "$0"
 }
 
+encpass_cmd_version() {
+	echo "tag version: $ENCPASS_VERSION"
+	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum $0)"
+	encpass_ext_func "cmd_version" "$@"
+}
+
 if [ "$(basename "$0")" = "encpass.sh" ]; then
 	# Subcommands for cli support
 	case "$1" in
@@ -1200,6 +1219,7 @@ if [ "$(basename "$0")" = "encpass.sh" ]; then
 		import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
 		extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
 		lite )      shift; encpass_checks; encpass_cmd_lite "$@" ;;
+		version|--version|-version|-v ) encpass_checks; encpass_cmd_version ;;
 		help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
 		* )
 			if [ ! -z "$1" ]; then
