@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-ENCPASS_VERSION="v4.1.0"
+ENCPASS_VERSION="v4.1.1"
 
 encpass_checks() {
 	[ -n "$ENCPASS_CHECKS" ] && return
@@ -1199,7 +1199,7 @@ encpass_cmd_lite() {
 
 encpass_cmd_version() {
 	echo "tag version: $ENCPASS_VERSION"
-	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum $0)"
+	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum "$0")"
 	encpass_ext_func "cmd_version" "$@"
 }
 
@@ -1219,7 +1219,7 @@ if [ "$(basename "$0")" = "encpass.sh" ]; then
 		import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
 		extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
 		lite )      shift; encpass_checks; encpass_cmd_lite "$@" ;;
-		version|--version|-version|-v ) encpass_checks; encpass_cmd_version ;;
+		version|--version|-version|-v ) encpass_checks; encpass_cmd_version "$@" ;;
 		help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
 		* )
 			if [ ! -z "$1" ]; then
