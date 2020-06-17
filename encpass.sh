@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-ENCPASS_VERSION="v4.1.1"
+ENCPASS_VERSION="v4.1.2"
 
 encpass_checks() {
 	[ -n "$ENCPASS_CHECKS" ] && return

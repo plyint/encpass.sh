@@ -64,10 +64,10 @@ _encpass()
 {
 	COMPREPLY=()
 	local cur="${COMP_WORDS[COMP_CWORD]}"
-	local commands="ls list show add update rm remove lock unlock extension dir rekey export import lite help"
+	local commands="ls list show add update rm remove lock unlock extension dir rekey export import lite version help"
 	if [[ $COMP_CWORD -gt 1 ]]; then
 		case "${COMP_WORDS[1]}" in
-			lock|unlock|import|lite)
+			lock|unlock|import|lite|version)
 				;;
 			ls|list|rekey)
 				_encpass_complete_entries

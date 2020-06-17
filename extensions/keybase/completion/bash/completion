@@ -64,10 +64,10 @@ _encpass()
 {
 	COMPREPLY=()
 	local cur="${COMP_WORDS[COMP_CWORD]}"
-	local commands="ls list show add update rm remove extension dir lite help create-repo delete-repo clone-repo list-repos refresh status store"
+	local commands="ls list show add update rm remove extension dir lite version help create-repo delete-repo clone-repo list-repos refresh status store"
 	if [[ $COMP_CWORD -gt 1 ]]; then
 		case "${COMP_WORDS[1]}" in
-			lite|status|refresh|list-repos|create-repo|clone-repo|delete-repo)
+			lite|version|status|refresh|list-repos|create-repo|clone-repo|delete-repo)
 				;;
 			ls|list|store)
 				_encpass_complete_entries
