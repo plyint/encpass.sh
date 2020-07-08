@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-ENCPASS_VERSION="v4.1.2"
+ENCPASS_VERSION="v4.1.3"
 
 encpass_checks() {
 	[ -n "$ENCPASS_CHECKS" ] && return
@@ -281,6 +281,25 @@ encpass_save_err() {
 	fi
 }
 
+encpass_remove_man_format() {
+	sed -r 's/\.TH//g; s/\.\\//g; s/\.RS//g; s/\.RE//g; s/\\fB//g; s/\\fR//g; s/\\fI//g; s/\\-/-/g; s/^ //g; s/.{80}/\0\n/g' | grep -v '^"' | grep -v '^man' | sed 's/^/    /g; s/    \.SH//g'
+}
+
+encpass_help_prog() {
+	if [ ! -z "$(command -v man)" ]; then
+	  if [ "$(man -l 2>&1 | grep 'invalid' | awk '{print $2}')" = "invalid" ]; then
+			# man exists, but no -l option is available (e.g macOS)
+			# let's attempt to emulate what man does
+			{ /usr/bin/tbl | /usr/bin/groff -Wall -mtty-char -Tascii -mandoc -c | /usr/bin/less -is; }
+		else
+			man -l -
+		fi
+	else
+		# No man, strip formatting and fallback to less
+    encpass_remove_man_format | less
+	fi
+}
+
 encpass_help() {
 
 	# Descriptions for commands that will be displayed in the help
@@ -324,7 +343,7 @@ You can determine if your version of encpass.sh is identical to a specific commi
 		encpass_"${ENCPASS_EXTENSION}"_help_commands
 	fi
 
-man -l - << EOF
+encpass_help_prog << EOF
 .\" Manpage for encpass.sh.
 .\" Email contact@plyint.com to correct errors or typos.
 .TH man 8 "06 March 2020" "1.0" "encpass.sh man page"
@@ -343,10 +362,11 @@ Include in shell scripts and call the \fBget_secret\fR function:
 Or invoke/manage from the command line:
 
    \fBencpass.sh\fR [ COMMAND ] [ OPTIONS ]... [ ARGS ]...
-.SH DESCRIPTION
-A lightweight solution for using encrypted passwords in shell scripts. It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within a script. This prevents shoulder surfing passwords and avoids storing the password in plain text, within a script, which could inadvertently be sent to or discovered by an individual at a later date.
 
-This script generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.
+.SH DESCRIPTION
+A lightweight solution for using encrypted passwords in shell scripts.  It allows a user to encrypt a password (or any other secret) at runtime and then use it, decrypted, within a script. This prevents shoulder surfing passwords and avoids storing the password in plain text, within a script, which could inadvertently be sent to or discovered by an individual at a later date.
+
+This script generates an AES 256 bit symmetric key for each script (or user-defined bucket) that stores secrets. This key will then be used to encrypt all secrets for that script or bucket.  
 
 Subsequent calls to retrieve a secret will not prompt for the value of that secret to be entered as the file with the encrypted value already exists.  
 
@@ -365,6 +385,7 @@ To use the encpass.sh script within a shell script, source the script and then c
    password=\$(get_secret)\fR
 
 Note: When no arguments are passed to the get_secret function, then the bucket name is set to the name of the script and the secret name is set to "password".  
+
    - bucket name = <script name>
    - secret name = "password"
 
@@ -459,7 +480,9 @@ $ENCPASS_HELP_VERSION_CMD_DESC
 Display this help manual.
 .RE
 
-Note: Wildcard handling is implemented for all commands that take secret and bucket names as arguments.  This enables performing operations like adding/removing a secret to/from multiple buckets at once.
+Note: Wildcard handling is implemented for all commands that take secret 
+and bucket names as arguments.  This enables performing operations like 
+adding/removing a secret to/from multiple buckets at once.
 
 ${ENCPASS_EXT_HELP_COMMANDS}
 

@@ -125,8 +125,8 @@ EOF
 }
 
 encpass_keybase_cmd_version() {
-  ENCPASS_KEYBASE_PATH="$(command -v encpass-$ENCPASS_EXTENSION.sh)"
-	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum $ENCPASS_KEYBASE_PATH)"
+  ENCPASS_KEYBASE_PATH="$(command -v encpass-"$ENCPASS_EXTENSION".sh)"
+	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum "$ENCPASS_KEYBASE_PATH")"
 }
 
 encpass_keybase_help_commands() {
@@ -148,8 +148,7 @@ ENCPASS_EXT_HELP_COMMANDS=$(cat << EOF
 .SH EXTENSION COMMANDS
 \fBcreate-repo\fR \fIteam/user\fR \fIrepository\fR
 .RS
-Creates a remote repo in Keybase for the Keybase team/user
-with the specified repository name.
+Creates a remote repo in Keybase for the Keybase team/user with the specified repository name.
 
 The Keybase repo will be created with the following format:
 \fIteam/user\fR/\fIrepository\fR.encpass
@@ -157,49 +156,34 @@ The Keybase repo will be created with the following format:
 
 \fBdelete-repo\fR \fIteam/user\fR \fIrepository\fR
 .RS
-Deletes the remote encpass.sh repo in Keybase for the specified
-team/user and repo.
+Deletes the remote encpass.sh repo in Keybase for the specified team/user and repo.
 .RE
 
 \fBclone-repo\fR \fIteam/user\fR \fIrepository\fR
 .RS
-Clones the encpass.sh repo in Keybase to the ENCPASS_HOME_DIR folder using Git.
-Secrets will be stored under the local ENCPASS_HOME_DIR/secrets folder.  The bucket
-name that will be created will be \fIteam/user\fR~\fIrepository\R.
+Clones the encpass.sh repo in Keybase to the ENCPASS_HOME_DIR folder using Git.  Secrets will be stored under the local ENCPASS_HOME_DIR/secrets folder.  The bucket name that will be created will be \fIteam/user\fR~\fIrepository\R.
 .RE
 
 \fBlist-repos\fR
 .RS
-Lists all the encpass.sh repositories in Keybase that can be cloned.  It assumes that all
-repos ending in ".encpass" are encpass.sh repositories.
+Lists all the encpass.sh repositories in Keybase that can be cloned.  It assumes that all repos ending in ".encpass" are encpass.sh repositories.
 .RE
 
 \fBrefresh\fR
 .RS
-Runs a "git pull --rebase" for all encpass.sh secrets for the ENCPASS_HOME_DIR
-that is currently set.  It is possible if the secrets held on the remote Keybase
-repo have been updated, WHILE you were making updates on your local that there 
-could be conflicts that result.  In that case you will need to change to the 
-local directory containing your modified secrets and then use git as you 
-normally would to stash your changes.  Once your changes are stashed, run a 
-refresh and then unstash your changes and resolve the conflicts.
+Runs a "git pull --rebase" for all encpass.sh secrets for the ENCPASS_HOME_DIR that is currently set.  It is possible if the secrets held on the remote Keybase repo have been updated, WHILE you were making updates on your local that there could be conflicts that result.  In that case you will need to change to the local directory containing your modified secrets and then use git as you normally would to stash your changes.  Once your changes are stashed, run a refresh and then unstash your changes and resolve the conflicts.
 .RE
 
 \fBstatus\fR
 .RS
-Lists all the local changes to encpass.sh secrets that need to be committed
-and pushed to the remote Keybase git repo.  It will output the "git status" of 
-each bucket where the changes are located that need to be committed and pushed.  
+Lists all the local changes to encpass.sh secrets that need to be committed and pushed to the remote Keybase git repo.  It will output the "git status" of each bucket where the changes are located that need to be committed and pushed.  
 
-The user can perform a "encpass.sh store \fIbucket\fR" command to commit and push
-the changes to Keybase.
+The user can perform a "encpass.sh store \fIbucket\fR" command to commit and push the changes to Keybase.
 .RE
 
 \fBstore\fR \fIbucket\fR
 .RS
-Commits and pushes all pending changes to Keybase for the specified bucket to the
-corresponding repo for the team/user.  If this fails you may need to run a "refresh" 
-to make sure you have the most current version of the secrets for that bucket.
+Commits and pushes all pending changes to Keybase for the specified bucket to the corresponding repo for the team/user.  If this fails you may need to run a "refresh" to make sure you have the most current version of the secrets for that bucket.
 .RE
 EOF
 )
