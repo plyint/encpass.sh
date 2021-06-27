@@ -20,7 +20,7 @@
 #
 ################################################################################
 
-ENCPASS_VERSION="v4.1.3"
+ENCPASS_VERSION="v4.1.4"
 
 encpass_checks() {
 	[ -n "$ENCPASS_CHECKS" ] && return
@@ -60,7 +60,12 @@ encpass_checks() {
 
 	fi
 
-  ENCPASS_CHECKS=1
+	# Name of shell script or shell that called encpass.sh
+	# Remove any preceding hyphens, so that ENCPASS_SNAME is not interpretted later
+	# as a command line parameter to basename or any other command.
+	ENCPASS_SNAME="$(echo "$0" | sed 's/^.-//g')"
+
+	ENCPASS_CHECKS=1
 }
 
 # Checks if the enabled extension has implented the passed function and if so calls it
@@ -79,11 +84,11 @@ encpass_include_init() {
 		ENCPASS_SECRET_NAME=$2
 	elif [ -n "$1" ]; then
 		if [ -z "$ENCPASS_BUCKET" ]; then
-		  ENCPASS_BUCKET=$(basename "$0")
+		  ENCPASS_BUCKET=$(basename "$ENCPASS_SNAME")
 		fi
 		ENCPASS_SECRET_NAME=$1
 	else
-		ENCPASS_BUCKET=$(basename "$0")
+		ENCPASS_BUCKET=$(basename "$ENCPASS_SNAME")
 		ENCPASS_SECRET_NAME="password"
 	fi
 }
@@ -126,7 +131,7 @@ get_secret() {
 	encpass_checks
 	encpass_ext_func "get_secret" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
-	[ "$(basename "$0")" != "encpass.sh" ] && encpass_include_init "$1" "$2"
+	[ "$(basename "$ENCPASS_SNAME")" != "encpass.sh" ] && encpass_include_init "$1" "$2"
 
 	encpass_set_private_key_abs_name
 	encpass_set_secret_abs_name
@@ -1223,36 +1228,36 @@ encpass_cmd_extension() {
 encpass_cmd_lite() {
 	encpass_ext_func "cmd_lite" "$@"; [ ! -z "$ENCPASS_EXT_FUNC" ] && return
 
-	head -n"$(awk '/\#LITE/{print NR;exit}' "$0")" "$0"
+	head -n"$(awk '/\#LITE/{print NR;exit}' "$ENCPASS_SNAME")" "$ENCPASS_SNAME"
 }
 
 encpass_cmd_version() {
 	echo "tag version: $ENCPASS_VERSION"
-	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum "$0")"
+	[ -x "$(command -v sha256sum)" ] && printf "SHA256 Checksum: %s\n" "$(sha256sum "$ENCPASS_SNAME")"
 	encpass_ext_func "cmd_version" "$@"
 }
 
-if [ "$(basename "$0")" = "encpass.sh" ]; then
+encpass_checks
+if [ "$(basename "$ENCPASS_SNAME")" = "encpass.sh" ]; then
 	# Subcommands for cli support
 	case "$1" in
-		add )       shift; encpass_checks; encpass_cmd_add "$@" ;;
-		update )    shift; encpass_checks; encpass_cmd_update "$@" ;;
-		rm|remove ) shift; encpass_checks; encpass_cmd_remove "$@" ;;
-		show )      shift; encpass_checks; encpass_cmd_show "$@" ;;
-		ls|list )   shift; encpass_checks; encpass_cmd_list "$@" ;;
-		lock )      shift; encpass_checks; encpass_cmd_lock "$@" ;;
-		unlock )    shift; encpass_checks; encpass_cmd_unlock "$@" ;;
-		dir )       shift; encpass_checks; encpass_cmd_dir "$@" ;;
-		rekey )     shift; encpass_checks; encpass_cmd_rekey "$@" ;;
-		export )    shift; encpass_checks; encpass_cmd_export "$@" ;;
-		import )    shift; encpass_checks; encpass_cmd_import "$@" ;;
-		extension ) shift; encpass_checks; encpass_cmd_extension "$@" ;;
-		lite )      shift; encpass_checks; encpass_cmd_lite "$@" ;;
-		version|--version|-version|-v ) encpass_checks; encpass_cmd_version "$@" ;;
-		help|--help|usage|--usage|\? ) encpass_checks; encpass_help ;;
+		add )       shift; encpass_cmd_add "$@" ;;
+		update )    shift; encpass_cmd_update "$@" ;;
+		rm|remove ) shift; encpass_cmd_remove "$@" ;;
+		show )      shift; encpass_cmd_show "$@" ;;
+		ls|list )   shift; encpass_cmd_list "$@" ;;
+		lock )      shift; encpass_cmd_lock "$@" ;;
+		unlock )    shift; encpass_cmd_unlock "$@" ;;
+		dir )       shift; encpass_cmd_dir "$@" ;;
+		rekey )     shift; encpass_cmd_rekey "$@" ;;
+		export )    shift; encpass_cmd_export "$@" ;;
+		import )    shift; encpass_cmd_import "$@" ;;
+		extension ) shift; encpass_cmd_extension "$@" ;;
+		lite )      shift; encpass_cmd_lite "$@" ;;
+		version|--version|-version|-v ) encpass_cmd_version "$@" ;;
+		help|--help|usage|--usage|\? )  encpass_help ;;
 		* )
 			if [ ! -z "$1" ]; then
-				encpass_checks
 				encpass_ext_func "commands" "$@" [ ! -z "$ENCPASS_EXT_FUNC" ] && exit 0
 				encpass_die "Command not recognized. See \"encpass.sh help\" for a list commands."
 			fi

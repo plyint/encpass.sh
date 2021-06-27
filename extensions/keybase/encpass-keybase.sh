@@ -23,17 +23,17 @@ encpass_keybase_include_init() {
 		ENCPASS_SECRET_NAME=$2
 	elif [ -n "$1" ]; then
 		if [ -z "$ENCPASS_BUCKET" ]; then
-		  ENCPASS_BUCKET="$ENCPASS_KEYBASE_USER~$(basename "$0")"
+		  ENCPASS_BUCKET="$ENCPASS_KEYBASE_USER~$(basename "$ENCPASS_SNAME")"
 		fi
 		ENCPASS_SECRET_NAME=$1
 	else
-		ENCPASS_BUCKET="$ENCPASS_KEYBASE_USER~$(basename "$0")"
+		ENCPASS_BUCKET="$ENCPASS_KEYBASE_USER~$(basename "$ENCPASS_SNAME")"
 		ENCPASS_SECRET_NAME="password"
 	fi
 }
 
 encpass_keybase_get_secret() {
-	[ "$(basename "$0")" != "encpass.sh" ] && encpass_keybase_include_init "$1" "$2"
+	[ "$(basename "$ENCPASS_SNAME")" != "encpass.sh" ] && encpass_keybase_include_init "$1" "$2"
 	encpass_set_secret_abs_name
 	encpass_keybase_decrypt_secret
 }
@@ -257,11 +257,11 @@ encpass_keybase_cmd_list_repos() {
 	printf "%-31s %-24s %-24s\n" "+++++" "++++" "+++++++++++++"
 
 if [ ! -z "$ENCPASS_KEYBASE_LIST" ];then
-#	echo "$ENCPASS_KEYBASE_LIST" | grep private | sed 's/\//~/g' | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\~/); printf "%-31s %-24s %s %s %s \n", whoami, a[1], script" clone", whoami, a[1]; }'
-echo "$ENCPASS_KEYBASE_LIST" | grep private | awk -v whoami="$(keybase whoami)" -v script="$0" '{split($1,a,/\./); printf "%-31s %-24s %-16s %s %s \n", whoami, a[1], script" clone-repo", whoami, a[1]; }' 2>/dev/null
+#	echo "$ENCPASS_KEYBASE_LIST" | grep private | sed 's/\//~/g' | awk -v whoami="$(keybase whoami)" -v script="$ENCPASS_SNAME" '{split($1,a,/\~/); printf "%-31s %-24s %s %s %s \n", whoami, a[1], script" clone", whoami, a[1]; }'
+echo "$ENCPASS_KEYBASE_LIST" | grep private | awk -v whoami="$(keybase whoami)" -v script="$ENCPASS_SNAME" '{split($1,a,/\./); printf "%-31s %-24s %-16s %s %s \n", whoami, a[1], script" clone-repo", whoami, a[1]; }' 2>/dev/null
 
-#	echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$0" '{split($1,a,/\./); if (a[3] != "encpass") printf "%s.%-24s %-24s %-16s %s.%s %s \n", a[1], a[2], a[3], script" clone", a[1], a[2], a[3]; else printf "%-31s %-24s %-16s %s %s \n", a[1], a[2], script" clone", a[1], a[2]; }'
-echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$0" '{split($1,a,/\~/); split(a[2],b,/\./); printf "%-31s %-24s %-16s %s %s \n", a[1], b[1], script" clone-repo", a[1], b[1]; }' 2>/dev/null
+#	echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$ENCPASS_SNAME" '{split($1,a,/\./); if (a[3] != "encpass") printf "%s.%-24s %-24s %-16s %s.%s %s \n", a[1], a[2], a[3], script" clone", a[1], a[2], a[3]; else printf "%-31s %-24s %-16s %s %s \n", a[1], a[2], script" clone", a[1], a[2]; }'
+echo "$ENCPASS_KEYBASE_LIST" | grep -v private | sed 's/\//~/g' | awk -v script="$ENCPASS_SNAME" '{split($1,a,/\~/); split(a[2],b,/\./); printf "%-31s %-24s %-16s %s %s \n", a[1], b[1], script" clone-repo", a[1], b[1]; }' 2>/dev/null
 
 fi
 }
@@ -319,12 +319,12 @@ encpass_keybase_cmd_store() {
 
 encpass_keybase_commands() {
 case "$1" in
-	clone-repo )  shift; encpass_checks; encpass_keybase_cmd_clone_repo "$@" ;;
-	create-repo ) shift; encpass_checks; encpass_keybase_cmd_create_repo "$@" ;;
-	delete-repo ) shift; encpass_checks; encpass_keybase_cmd_delete_repo "$@" ;;
-	list-repos )  shift; encpass_checks; encpass_keybase_cmd_list_repos "$@" ;;
-	refresh )     shift; encpass_checks; encpass_keybase_cmd_refresh "$@" ;;
-	status )      shift; encpass_checks; encpass_keybase_cmd_status "$@" ;;
-	store )       shift; encpass_checks; encpass_keybase_cmd_store "$@" ;;
+	clone-repo )  shift; encpass_keybase_cmd_clone_repo "$@" ;;
+	create-repo ) shift; encpass_keybase_cmd_create_repo "$@" ;;
+	delete-repo ) shift; encpass_keybase_cmd_delete_repo "$@" ;;
+	list-repos )  shift; encpass_keybase_cmd_list_repos "$@" ;;
+	refresh )     shift; encpass_keybase_cmd_refresh "$@" ;;
+	status )      shift; encpass_keybase_cmd_status "$@" ;;
+	store )       shift; encpass_keybase_cmd_store "$@" ;;
 esac
 }
