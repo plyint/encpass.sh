@@ -534,7 +534,7 @@ encpass_cmd_add() {
 	else
 		encpass_die "Error: A bucket name and secret name must be provided when adding a secret."
 	fi
-	unset OPTIND
+	unset OPTIND 2>/dev/null #Suppress illegal number warning from Dash shell
 }
 
 encpass_cmd_update() {
@@ -610,7 +610,7 @@ encpass_cmd_remove() {
 	else
 		encpass_die "Error: The bucket named $1 does not exist."
 	fi
-	unset OPTIND
+	unset OPTIND 2>/dev/null #Suppress illegal number warning from Dash shell
 }
 
 encpass_cmd_show() {
@@ -1056,7 +1056,7 @@ encpass_cmd_export() {
 			echo "Successfully created export file $ENCPASS_EXPORT_FILENAME in $ENCPASS_HOME_DIR/exports"
 		fi
 	fi
-	unset OPTIND
+	unset OPTIND 2>/dev/null #Suppress illegal number warning from Dash shell
 }
 
 encpass_cmd_import() {
@@ -1147,7 +1147,7 @@ encpass_cmd_import() {
 	else
 		encpass_die "Error: Import file $1 does not exist."
 	fi
-	unset OPTIND
+	unset OPTIND 2>/dev/null #Suppress illegal number warning from Dash shell
 }
 
 encpass_cmd_extension() {
