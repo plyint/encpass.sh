@@ -63,7 +63,7 @@ encpass_checks() {
 	# Name of shell script or shell that called encpass.sh
 	# Remove any preceding hyphens, so that ENCPASS_SNAME is not interpretted later
 	# as a command line parameter to basename or any other command.
-	ENCPASS_SNAME="$(echo "$0" | sed 's/^.-//g')"
+	ENCPASS_SNAME="$(echo "$0" | sed 's/^-*//g')"
 
 	ENCPASS_CHECKS=1
 }
