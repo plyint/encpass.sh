@@ -294,10 +294,10 @@ encpass_remove_man_format() {
 
 encpass_help_prog() {
 	if [ ! -z "$(command -v man)" ]; then
-	  if [ "$(man -l 2>&1 | grep 'invalid' | awk '{print $2}')" = "invalid" ]; then
+	  if [ "$(man -l 2>&1 | grep 'illegal' | awk '{print $2}')" = "illegal" ]; then
 			# man exists, but no -l option is available (e.g macOS)
 			# let's attempt to emulate what man does
-			{ /usr/bin/tbl | /usr/bin/groff -Wall -mtty-char -Tascii -mandoc -c | /usr/bin/less -is; }
+			{ mandoc -a; }
 		else
 			man -l -
 		fi
